@@ -13,14 +13,7 @@
     </header>
 
     <!-- Content Area -->
-    <main
-      ref="contentRef"
-      class="flex-1 overflow-y-auto ac-scroll"
-      :style="{
-        paddingBottom: composerHeight + 'px',
-      }"
-      @scroll="handleScroll"
-    >
+    <main ref="contentRef" class="flex-1 overflow-y-auto ac-scroll" @scroll="handleScroll">
       <!-- Stable wrapper for ResizeObserver -->
       <div ref="contentSlotRef">
         <slot name="content" />
