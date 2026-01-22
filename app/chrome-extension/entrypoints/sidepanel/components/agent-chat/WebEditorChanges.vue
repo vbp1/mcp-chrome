@@ -51,6 +51,7 @@
           :selected="tx.selectedElement.value!"
           @hover:start="handleSelectionHoverStart"
           @hover:end="handleSelectionHoverEnd"
+          @send:to-chat="handleSendToChat"
         />
 
         <!-- Edit chips -->
@@ -94,6 +95,15 @@ import type {
 } from '@/common/web-editor-types';
 import ElementChip from './ElementChip.vue';
 import SelectionChip from './SelectionChip.vue';
+
+// =============================================================================
+// Emits
+// =============================================================================
+
+const emit = defineEmits<{
+  /** Send element info to chat input */
+  'selection:send-to-chat': [selected: SelectedElementSummary];
+}>();
 
 // =============================================================================
 // Inject TX State from Parent (AgentChat.vue)
@@ -516,6 +526,14 @@ async function handleSelectionHoverEnd(selected: SelectedElementSummary): Promis
   } catch {
     // Silently ignore
   }
+}
+
+/**
+ * Handle send to chat for selection chip.
+ * Emits the selection to parent for adding to chat input.
+ */
+function handleSendToChat(selected: SelectedElementSummary): void {
+  emit('selection:send-to-chat', selected);
 }
 
 // =============================================================================

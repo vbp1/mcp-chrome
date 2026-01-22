@@ -163,6 +163,40 @@ export function initElementMarkerListeners() {
             .catch((e) => sendResponse({ success: false, error: e?.message || String(e) }));
           return true;
         }
+        case BACKGROUND_MESSAGE_TYPES.ELEMENT_MARKER_SEND_TO_CHAT: {
+          const elementInfo = message.elementInfo;
+          if (!elementInfo) {
+            sendResponse({ success: false, error: 'elementInfo is required' });
+            return true;
+          }
+          (async () => {
+            try {
+              // Store element info in storage for side panel to read
+              await chrome.storage.local.set({
+                'element-marker-send-to-chat': {
+                  elementInfo,
+                  timestamp: Date.now(),
+                },
+              });
+
+              // Get current window to open side panel in
+              const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+              const tab = tabs[0];
+              if (!tab?.windowId) {
+                sendResponse({ success: false, error: 'no active window' });
+                return;
+              }
+
+              // Open side panel - this will trigger the side panel to check for pending element
+              await chrome.sidePanel.open({ windowId: tab.windowId });
+
+              sendResponse({ success: true });
+            } catch (e) {
+              sendResponse({ success: false, error: (e as any)?.message || String(e) });
+            }
+          })();
+          return true;
+        }
         case BACKGROUND_MESSAGE_TYPES.ELEMENT_MARKER_VALIDATE: {
           // Validate via MCP tool chain
           (async () => {

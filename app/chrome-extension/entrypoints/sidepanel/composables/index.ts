@@ -63,3 +63,7 @@ export type {
 // Agent Input Preferences (fake caret, etc.)
 export { useAgentInputPreferences } from './useAgentInputPreferences';
 export type { UseAgentInputPreferences } from './useAgentInputPreferences';
+
+// Element References (@Element_N in chat input)
+export { useElementReferences, ELEMENT_REF_PATTERN } from './useElementReferences';
+export type { ElementReferenceData, UseElementReferences } from './useElementReferences';

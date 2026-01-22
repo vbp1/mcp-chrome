@@ -465,6 +465,20 @@
         box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
       }
 
+      .em-btn-chat {
+        background: #8b5cf6;
+        color: #ffffff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .em-btn-chat:hover {
+        background: #7c3aed;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+      }
+
       .em-btn-ghost {
         background: #f5f5f5;
         color: #404040;
@@ -722,6 +736,15 @@
           <div class="em-actions">
             <button class="em-btn em-btn-success" id="__em_save">Save</button>
             <button class="em-btn em-btn-ghost" id="__em_cancel">Cancel</button>
+          </div>
+
+          <div class="em-actions">
+            <button class="em-btn em-btn-chat" id="__em_send_to_chat" title="Send element info to AI Assistant chat">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle; margin-right: 4px;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              Send to Chat
+            </button>
           </div>
         </div>
 
@@ -2393,6 +2416,47 @@
     }
   }
 
+  /**
+   * Send element info to AI Assistant chat
+   * Opens side panel and inserts formatted element info at cursor position
+   */
+  async function sendToChat() {
+    try {
+      const selector = STATE.box?.querySelector('#__em_selector')?.textContent?.trim();
+      if (!selector) return;
+
+      const el = STATE.selectedEl;
+      const selectorType = StateStore.get('selectorType') || 'css';
+
+      // Build element info
+      const elementInfo = {
+        selector,
+        selectorType,
+        tagName: el?.tagName?.toLowerCase() || 'unknown',
+        id: el?.id || null,
+        classes: el ? Array.from(el.classList || []) : [],
+        text: el?.textContent?.trim()?.slice(0, 100) || null,
+        pageUrl: location.href,
+      };
+
+      // Send to background to open side panel and insert
+      await chrome.runtime.sendMessage({
+        type: 'element_marker_send_to_chat',
+        elementInfo,
+      });
+
+      StateStore.set({
+        validation: { status: 'success', message: '✓ Sent to chat' },
+      });
+
+      setTimeout(() => {
+        StateStore.set({ validation: { status: 'idle', message: '' } });
+      }, 2000);
+    } catch (err) {
+      console.error('[ElementMarker] sendToChat error:', err);
+    }
+  }
+
   function copySelectorNow() {
     try {
       const sel = STATE.box?.querySelector('#__em_selector')?.textContent?.trim();
@@ -2518,6 +2582,9 @@
     // Copy
     host.querySelector('#__em_copy')?.addEventListener('click', copySelectorNow);
     host.querySelector('#__em_copy_selector')?.addEventListener('click', copySelectorNow);
+
+    // Send to Chat
+    host.querySelector('#__em_send_to_chat')?.addEventListener('click', sendToChat);
 
     // Action change handler - show/hide action-specific options
     host.querySelector('#__em_action')?.addEventListener('change', (e) => {

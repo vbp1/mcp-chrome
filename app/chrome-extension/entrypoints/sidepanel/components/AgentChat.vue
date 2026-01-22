@@ -50,7 +50,7 @@
         <!-- Composer -->
         <template #composer>
           <!-- Web Editor Changes Chips -->
-          <WebEditorChanges />
+          <WebEditorChanges @selection:send-to-chat="handleSelectionSendToChat" />
 
           <AgentComposer
             :model-value="chat.input.value"
@@ -70,7 +70,8 @@
             :reasoning-effort="currentReasoningEffort"
             :available-reasoning-efforts="currentAvailableReasoningEfforts"
             :enable-fake-caret="inputPreferences.fakeCaretEnabled.value"
-            @update:model-value="chat.input.value = $event"
+            :element-references="elementRefs.allReferences.value"
+            @update:model-value="handleInputChange"
             @submit="handleSend"
             @cancel="chat.cancelCurrentRequest()"
             @attachment:add="handleAttachmentAdd"
@@ -182,11 +183,14 @@ import {
   useAgentChatViewRoute,
   useOpenProjectPreference,
   useAgentInputPreferences,
+  useElementReferences,
   WEB_EDITOR_TX_STATE_INJECTION_KEY,
   AGENT_SERVER_PORT_KEY,
   type AgentThemeId,
+  type ElementReferenceData,
 } from '../composables';
 import type { OpenProjectTarget } from 'chrome-mcp-shared';
+import type { SelectedElementSummary } from '@/common/web-editor-types';
 
 // New UI Components
 import {
@@ -269,6 +273,9 @@ const currentManagementInfo = ref<import('chrome-mcp-shared').AgentManagementInf
 // Attachment cache panel state
 const attachmentCacheOpen = ref(false);
 
+// Element references for @Element_N in chat input (must be before sessions for callback)
+const elementRefs = useElementReferences();
+
 // Initialize composables - sessions must be declared first for sessionId access
 const sessions = useAgentSessions({
   getServerPort: () => server.serverPort.value,
@@ -285,6 +292,9 @@ const sessions = useAgentSessions({
     chat.currentRequestId.value = null;
     chat.isStreaming.value = false;
     chat.requestState.value = 'idle';
+
+    // Reset element references - each session has its own @Element_N counter
+    elementRefs.reset();
 
     // Always sync URL when session changes (for all paths: delete, project switch, etc.)
     // This ensures URL stays consistent for refresh/deep-link scenarios
@@ -1121,6 +1131,217 @@ function buildInstructionWithSelectionContext(userInput: string): string {
   return `${contextLines.join('\n')}\n\n[UserRequest]\n${userInput}`;
 }
 
+/**
+ * Format selected element info as readable markdown for chat input.
+ * Uses the same structure as Apply payload for consistency.
+ */
+function formatElementInfoForChat(selected: SelectedElementSummary): string {
+  const lines: string[] = [];
+
+  // Debug source (React/Vue component location)
+  const ds = selected.locator?.debugSource;
+  if (ds?.file) {
+    lines.push('## Source Location (from React/Vue debug info)');
+    const loc = ds.line ? `${ds.file}:${ds.line}${ds.column ? `:${ds.column}` : ''}` : ds.file;
+    lines.push(`- file: ${loc}`);
+    if (ds.componentName) {
+      lines.push(`- component: ${ds.componentName}`);
+    }
+    lines.push('');
+  }
+
+  // Element Fingerprint
+  lines.push('## Element Fingerprint');
+  lines.push(`- tag: ${selected.tagName || 'unknown'}`);
+
+  // Extract id and classes from fingerprint or label
+  const fingerprint = selected.locator?.fingerprint || '';
+  const parts = fingerprint.split('|').filter(Boolean);
+  for (const part of parts.slice(1)) {
+    if (part.startsWith('id=')) {
+      lines.push(`- id: ${part.slice(3)}`);
+    } else if (part.startsWith('class=')) {
+      const classes = part.slice(6).replace(/\./g, ' ').trim();
+      if (classes) {
+        lines.push(`- classes: ${classes}`);
+      }
+    } else if (part.startsWith('text=')) {
+      const text = part.slice(5).trim();
+      if (text) {
+        lines.push(`- text: "${text.length > 50 ? text.slice(0, 47) + '...' : text}"`);
+      }
+    }
+  }
+  lines.push('');
+
+  // CSS Selectors
+  const selectors = selected.locator?.selectors ?? [];
+  if (selectors.length > 0) {
+    lines.push('## CSS Selectors');
+    for (const sel of selectors.slice(0, 5)) {
+      lines.push(`- ${sel}`);
+    }
+    lines.push('');
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * Handle send element info to chat input.
+ * Formats the selected element and prepends it to chat input.
+ */
+function handleSelectionSendToChat(selected: SelectedElementSummary): void {
+  const elementInfo = formatElementInfoForChat(selected);
+  const currentInput = chat.input.value.trim();
+
+  // Prepend element info to current input, add separator if there's existing content
+  if (currentInput) {
+    chat.input.value = `${elementInfo}\n---\n\n${currentInput}`;
+  } else {
+    chat.input.value = `${elementInfo}\n`;
+  }
+}
+
+/**
+ * Format element info from Element Marker for chat input.
+ */
+interface ElementMarkerInfo {
+  selector: string;
+  selectorType: 'css' | 'xpath';
+  tagName: string;
+  id: string | null;
+  classes: string[];
+  text: string | null;
+  pageUrl: string;
+}
+
+function formatElementMarkerInfoForChat(info: ElementMarkerInfo): string {
+  const lines: string[] = [];
+
+  // Page URL
+  lines.push(`## Page URL`);
+  lines.push(`${info.pageUrl}`);
+  lines.push('');
+
+  // Element Fingerprint
+  lines.push('## Element Fingerprint');
+  lines.push(`- tag: ${info.tagName || 'unknown'}`);
+  if (info.id) {
+    lines.push(`- id: ${info.id}`);
+  }
+  if (info.classes && info.classes.length > 0) {
+    lines.push(`- classes: ${info.classes.join(' ')}`);
+  }
+  if (info.text) {
+    const truncatedText = info.text.length > 50 ? info.text.slice(0, 47) + '...' : info.text;
+    lines.push(`- text: "${truncatedText}"`);
+  }
+  lines.push('');
+
+  // CSS Selector
+  lines.push(`## ${info.selectorType === 'xpath' ? 'XPath' : 'CSS'} Selector`);
+  lines.push(`- ${info.selector}`);
+  lines.push('');
+
+  return lines.join('\n');
+}
+
+/**
+ * Check for pending element from Element Marker and insert into chat.
+ * Called on mount and when storage changes.
+ * Inserts @Element_N reference instead of full text.
+ */
+async function checkAndInsertPendingElement(): Promise<void> {
+  try {
+    const stored = await chrome.storage.local.get('element-marker-send-to-chat');
+    const pending = stored['element-marker-send-to-chat'];
+
+    if (!pending || !pending.elementInfo) return;
+
+    // Check if this is recent (within last 5 seconds) to avoid stale data
+    const age = Date.now() - (pending.timestamp || 0);
+    if (age > 5000) {
+      // Clear stale data
+      await chrome.storage.local.remove('element-marker-send-to-chat');
+      return;
+    }
+
+    // Clear the pending data immediately to prevent duplicate processing
+    await chrome.storage.local.remove('element-marker-send-to-chat');
+
+    const elementInfo = pending.elementInfo as ElementMarkerInfo;
+
+    // If we're on sessions list view, create/select a session first
+    if (viewRoute.isSessionsView.value) {
+      // Try to get or create a session
+      const projectId = projects.selectedProjectId.value;
+      if (projectId) {
+        // If there are existing sessions, select the most recent one
+        if (sessions.sessions.value.length > 0) {
+          await handleSessionSelectAndNavigate(sessions.sessions.value[0].id);
+        } else {
+          // Create a new session
+          await handleNewSessionAndNavigate();
+        }
+      }
+    }
+
+    // Create full text for LLM
+    const fullText = formatElementMarkerInfoForChat(elementInfo);
+
+    // Create short summary for tooltip
+    const summaryParts: string[] = [];
+    summaryParts.push(`<${elementInfo.tagName}>`);
+    if (elementInfo.id) summaryParts.push(`#${elementInfo.id}`);
+    if (elementInfo.classes?.length)
+      summaryParts.push(`.${elementInfo.classes.slice(0, 2).join('.')}`);
+    if (elementInfo.text) {
+      const shortText =
+        elementInfo.text.length > 30 ? elementInfo.text.slice(0, 27) + '...' : elementInfo.text;
+      summaryParts.push(`"${shortText}"`);
+    }
+    const summary = summaryParts.join(' ');
+
+    // Add reference and get @Element_N
+    const refData: ElementReferenceData = {
+      fullText,
+      summary,
+      selector: elementInfo.selector,
+      pageUrl: elementInfo.pageUrl,
+    };
+    const elementRef = elementRefs.addReference(refData);
+
+    // Insert @Element_N at the end of current input (or as new input)
+    const currentInput = chat.input.value.trim();
+    if (currentInput) {
+      chat.input.value = `${currentInput} ${elementRef} `;
+    } else {
+      chat.input.value = `${elementRef} `;
+    }
+  } catch (err) {
+    console.error('[AgentChat] checkAndInsertPendingElement error:', err);
+  }
+}
+
+// =============================================================================
+// Input Change Handler (with @Element_N cleanup)
+// =============================================================================
+
+/**
+ * Handle chat input changes with @Element_N broken reference cleanup.
+ */
+function handleInputChange(value: string): void {
+  // Clean broken references (partial deletions like @Element without _N)
+  const cleanedValue = elementRefs.cleanBrokenReferences(value);
+
+  // Update input value
+  chat.input.value = cleanedValue;
+
+  // Prune unused references from the map
+  elementRefs.pruneUnusedReferences(cleanedValue);
+}
+
 // Attachment handlers
 function handleAttachmentAdd(): void {
   // Create and click a hidden file input
@@ -1143,6 +1364,9 @@ async function handleSend(): Promise<void> {
   // Capture input before clearing for preview update
   const messageText = chat.input.value.trim();
   if (!messageText) return;
+
+  // Expand @Element_N references to full text for LLM
+  const expandedMessageText = elementRefs.expandReferences(messageText);
 
   // Check if user has selected an element in web editor
   const selection = webEditorTxState.selectedElement.value;
@@ -1169,7 +1393,8 @@ async function handleSend(): Promise<void> {
   // Build instruction with web editor selection context (if any)
   // The UI will show the original messageText, but the actual instruction
   // sent to the server will include element context for AI to understand
-  const instructionWithContext = buildInstructionWithSelectionContext(messageText);
+  // Use expandedMessageText to include full @Element_N content
+  const instructionWithContext = buildInstructionWithSelectionContext(expandedMessageText);
 
   // Use getAttachments() to strip previewUrl and avoid payload bloat
   chat.attachments.value = attachments.getAttachments() ?? [];
@@ -1358,6 +1583,16 @@ onMounted(async () => {
         await loadSessionHistory(sessions.selectedSessionId.value);
       }
     }
+  }
+
+  // Check for pending element from Element Marker (Send to Chat)
+  await checkAndInsertPendingElement();
+});
+
+// Listen for storage changes to detect new "Send to Chat" requests while side panel is open
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === 'local' && changes['element-marker-send-to-chat']?.newValue) {
+    checkAndInsertPendingElement();
   }
 });
 

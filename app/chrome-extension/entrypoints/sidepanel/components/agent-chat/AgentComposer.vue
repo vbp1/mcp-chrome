@@ -120,6 +120,14 @@
           @paste="handlePaste"
         />
 
+        <!-- Element reference highlight overlay -->
+        <ElementRefOverlay
+          v-if="elementReferences"
+          :textarea-ref="textareaRef"
+          :value="modelValue"
+          :references="elementReferences"
+        />
+
         <!-- Fake caret overlay (opt-in comet effect, only mount when enabled) -->
         <FakeCaretOverlay
           v-if="enableFakeCaret"
@@ -402,8 +410,10 @@ import type { ModelDefinition } from '@/common/agent-models';
 import type { AttachmentWithPreview } from '../../composables/useAttachments';
 import type { RequestState } from '../../composables/useAgentChat';
 import { useTextareaAutoResize } from '../../composables/useTextareaAutoResize';
+import type { ElementReferenceData } from '../../composables/useElementReferences';
 import ComposerDrawer from './ComposerDrawer.vue';
 import FakeCaretOverlay from './FakeCaretOverlay.vue';
+import ElementRefOverlay from './ElementRefOverlay.vue';
 
 const props = defineProps<{
   modelValue: string;
@@ -428,6 +438,8 @@ const props = defineProps<{
   availableReasoningEfforts?: readonly CodexReasoningEffort[];
   // Fake caret feature flag
   enableFakeCaret?: boolean;
+  // Element references for @Element_N highlighting
+  elementReferences?: Map<number, ElementReferenceData>;
 }>();
 
 /**
