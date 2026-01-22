@@ -336,6 +336,7 @@
       @cancel="$emit('cancel')"
       @attachment:remove="$emit('attachment:remove', $event)"
       @paste="handlePaste"
+      @element-chip:click="(data, num) => emit('element-chip:click', data, num)"
     >
       <template #left-actions>
         <div class="flex items-center gap-1">
@@ -571,6 +572,7 @@ const emit = defineEmits<{
   'reasoning-effort:change': [effort: CodexReasoningEffort];
   'session:settings': [];
   'session:reset': [];
+  'element-chip:click': [data: ElementReferenceData, elementNum: number];
 }>();
 
 const inputRef = ref<HTMLDivElement | null>(null);
@@ -610,6 +612,7 @@ const {
     }
   },
   requireModifierForSubmit: false,
+  onChipClick: (data, elementNum) => emit('element-chip:click', data, elementNum),
 });
 
 // Show expand button when content exceeds max height
@@ -776,7 +779,11 @@ defineExpose({
   margin: 0 1px;
   font-weight: 500;
   user-select: all;
-  cursor: default;
+  cursor: pointer;
+}
+
+.element-chip:hover {
+  opacity: 0.85;
 }
 
 .element-chip--invalid {

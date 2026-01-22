@@ -28,6 +28,8 @@ export interface UseContentEditableInputOptions {
   onSubmit?: () => void;
   /** Whether Cmd/Ctrl+Enter is required (drawer mode) */
   requireModifierForSubmit?: boolean;
+  /** Callback when an element chip is clicked (for highlighting in browser) */
+  onChipClick?: (data: ElementReferenceData, elementNum: number) => void;
 }
 
 export interface UseContentEditableInputReturn {
@@ -83,11 +85,19 @@ export function parseTextToNodes(
 
     // Create atomic span for the reference
     const num = parseInt(match[1], 10);
+    const refData = references.get(num);
     const span = document.createElement('span');
     span.contentEditable = 'false';
     span.dataset.elementRef = String(num);
-    span.className = references.has(num) ? 'element-chip' : 'element-chip element-chip--invalid';
+    span.className = refData ? 'element-chip' : 'element-chip element-chip--invalid';
     span.textContent = match[0]; // @Element_N
+
+    // Add tooltip and data for click handling
+    if (refData) {
+      span.title = refData.summary;
+      span.dataset.selector = refData.selector;
+      span.dataset.pageUrl = refData.pageUrl;
+    }
 
     fragment.appendChild(span);
     lastIndex = regex.lastIndex;
@@ -396,6 +406,7 @@ export function useContentEditableInput(
     onInput,
     onSubmit,
     requireModifierForSubmit = false,
+    onChipClick,
   } = options;
 
   const height = ref<number>(minHeight);
@@ -577,6 +588,25 @@ export function useContentEditableInput(
     containerRef.value?.focus();
   }
 
+  /**
+   * Handle click events on element chips.
+   */
+  function handleClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+
+    // Check if click was on an element chip
+    if (target.dataset.elementRef !== undefined) {
+      const num = parseInt(target.dataset.elementRef, 10);
+      const refData = references.value.get(num);
+
+      if (refData && onChipClick) {
+        event.preventDefault();
+        event.stopPropagation();
+        onChipClick(refData, num);
+      }
+    }
+  }
+
   // Watch value changes from external source
   watch(
     value,
@@ -626,6 +656,9 @@ export function useContentEditableInput(
     // Initial render
     render();
 
+    // Add click handler for element chips
+    el.addEventListener('click', handleClick);
+
     // Setup ResizeObserver for width changes
     if (typeof ResizeObserver !== 'undefined') {
       lastWidth = el.offsetWidth;
@@ -644,6 +677,10 @@ export function useContentEditableInput(
   });
 
   onUnmounted(() => {
+    const el = containerRef.value;
+    if (el) {
+      el.removeEventListener('click', handleClick);
+    }
     resizeObserver?.disconnect();
     resizeObserver = null;
   });

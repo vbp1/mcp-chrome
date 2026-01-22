@@ -214,6 +214,7 @@ const emit = defineEmits<{
   cancel: [];
   'attachment:remove': [index: number];
   paste: [event: ClipboardEvent];
+  'element-chip:click': [data: ElementReferenceData, elementNum: number];
 }>();
 
 const inputRef = ref<HTMLDivElement | null>(null);
@@ -243,6 +244,7 @@ const {
     }
   },
   requireModifierForSubmit: true, // Cmd/Ctrl+Enter to submit in drawer
+  onChipClick: (data, elementNum) => emit('element-chip:click', data, elementNum),
 });
 
 // Detect OS for keyboard shortcut display

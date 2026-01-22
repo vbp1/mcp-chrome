@@ -83,6 +83,7 @@
             @reasoning-effort:change="handleComposerReasoningEffortChange"
             @session:settings="handleComposerOpenSettings"
             @session:reset="handleComposerReset"
+            @element-chip:click="handleElementChipClick"
           />
         </template>
       </AgentChatShell>
@@ -780,6 +781,58 @@ async function handleComposerReset(): Promise<void> {
   const sessionId = sessions.selectedSessionId.value;
   if (sessionId) {
     await handleResetSession(sessionId);
+  }
+}
+
+/**
+ * Handle element chip click - highlight element in browser.
+ * Finds tabs matching the pageUrl and sends highlight message to Element Marker.
+ */
+async function handleElementChipClick(
+  data: ElementReferenceData,
+  _elementNum: number,
+): Promise<void> {
+  if (!data.selector || !data.pageUrl) return;
+
+  try {
+    // Find tabs matching the pageUrl
+    const tabs = await chrome.tabs.query({ url: data.pageUrl });
+    if (tabs.length === 0) {
+      // Try with wildcard for path variations
+      const url = new URL(data.pageUrl);
+      const baseUrl = `${url.origin}/*`;
+      const fallbackTabs = await chrome.tabs.query({ url: baseUrl });
+      if (fallbackTabs.length === 0) {
+        console.warn('[AgentChat] No tabs found for URL:', data.pageUrl);
+        return;
+      }
+      tabs.push(...fallbackTabs);
+    }
+
+    // Use the first matching tab
+    const tabId = tabs[0].id;
+    if (!tabId) return;
+
+    // Ensure element-marker is injected
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId, allFrames: true },
+        files: ['inject-scripts/element-marker.js'],
+        world: 'ISOLATED',
+      });
+    } catch {
+      // Tab might not support content scripts
+    }
+
+    // Send highlight message
+    await chrome.tabs.sendMessage(tabId, {
+      action: 'element_marker_highlight',
+      selector: data.selector,
+      selectorType: 'css',
+      listMode: false,
+    });
+  } catch (error) {
+    console.error('[AgentChat] Failed to highlight element:', error);
   }
 }
 
