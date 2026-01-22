@@ -1286,11 +1286,6 @@ function formatElementMarkerInfoForChat(info: ElementMarkerInfo): string {
   }
   lines.push('');
 
-  // CSS Selector
-  lines.push(`## ${info.selectorType === 'xpath' ? 'XPath' : 'CSS'} Selector`);
-  lines.push(`- ${info.selector}`);
-  lines.push('');
-
   return lines.join('\n');
 }
 
