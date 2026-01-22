@@ -772,6 +772,18 @@
     "message": "Manage page element markers",
     "description": "Element marker management entry description"
   },
+  "serverSettingsTitle": {
+    "message": "Server Settings",
+    "description": "Server settings entry title"
+  },
+  "serverSettingsDesc": {
+    "message": "Configure MCP server connection",
+    "description": "Server settings entry description"
+  },
+  "serverSettingsTooltip": {
+    "message": "Server Settings",
+    "description": "Server settings button tooltip"
+  },
   "localModelTitle": { "message": "Local Model", "description": "Local model entry title" },
   "localModelDesc": {
     "message": "Semantic engine and model management",

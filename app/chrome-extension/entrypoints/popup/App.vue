@@ -8,31 +8,81 @@
         </div>
       </div>
       <div class="content">
-        <!-- 服务配置卡片 -->
+        <!-- 服务状态卡片 (always visible) -->
         <div class="section">
-          <h2 class="section-title">{{ getMessage('nativeServerConfigLabel') }}</h2>
+          <h2 class="section-title">{{ getMessage('runningStatusLabel') }}</h2>
           <div class="config-card">
             <div class="status-section">
-              <div class="status-header">
-                <p class="status-label">{{ getMessage('runningStatusLabel') }}</p>
-                <button
-                  class="refresh-status-button"
-                  @click="refreshServerStatus"
-                  :title="getMessage('refreshStatusButton')"
-                >
-                  <RefreshIcon className="icon-small" />
-                </button>
+              <div
+                class="status-header"
+                :class="{ clickable: isServiceRunning }"
+                @click="isServiceRunning && (statusCollapsed = !statusCollapsed)"
+              >
+                <div class="status-header-left">
+                  <span :class="['status-dot', getStatusClass()]"></span>
+                  <span class="status-text">{{ getStatusText() }}</span>
+                </div>
+                <div class="status-header-right">
+                  <button
+                    class="refresh-status-button"
+                    @click.stop="refreshServerStatus"
+                    :title="getMessage('refreshStatusButton')"
+                  >
+                    <RefreshIcon className="icon-small" />
+                  </button>
+                  <button
+                    v-if="isServiceRunning"
+                    class="expand-status-button"
+                    @click.stop="statusCollapsed = !statusCollapsed"
+                    :title="statusCollapsed ? 'Expand' : 'Collapse'"
+                  >
+                    <svg
+                      :class="['expand-icon', { rotated: !statusCollapsed }]"
+                      viewBox="0 0 24 24"
+                      width="16"
+                      height="16"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                </div>
               </div>
-              <div class="status-info">
-                <span :class="['status-dot', getStatusClass()]"></span>
-                <span class="status-text">{{ getStatusText() }}</span>
-              </div>
-              <div v-if="serverStatus.lastUpdated" class="status-timestamp">
+              <div
+                v-if="(!statusCollapsed || !isServiceRunning) && serverStatus.lastUpdated"
+                class="status-timestamp"
+              >
                 {{ getMessage('lastUpdatedLabel') }}
                 {{ new Date(serverStatus.lastUpdated).toLocaleTimeString() }}
               </div>
             </div>
+          </div>
+        </div>
 
+        <!-- 服务配置卡片 (collapsible) -->
+        <div v-if="configExpanded" class="section">
+          <div class="section-header">
+            <h2 class="section-title">{{ getMessage('nativeServerConfigLabel') }}</h2>
+            <button
+              class="section-close-button"
+              @click="configExpanded = false"
+              :title="getMessage('closeButton')"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div class="config-card">
             <div v-if="showMcpConfig" class="mcp-config-section">
               <div class="mcp-config-header">
                 <p class="mcp-config-label">{{ getMessage('mcpServerConfigLabel') }}</p>
@@ -99,6 +149,28 @@
               :data-tooltip="getMessage('elementMarkerTooltip')"
             >
               <MarkerIcon />
+            </button>
+            <button
+              class="rr-icon-btn rr-icon-btn-settings has-tooltip"
+              :class="{ active: configExpanded }"
+              @click="configExpanded = !configExpanded"
+              :data-tooltip="getMessage('serverSettingsTooltip')"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="24"
+                height="24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                />
+                <circle cx="12" cy="12" r="3" />
+              </svg>
             </button>
           </div>
         </div>
@@ -186,6 +258,41 @@
               </div>
               <svg
                 class="entry-arrow"
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+            <button class="entry-item" @click="configExpanded = !configExpanded">
+              <div class="entry-icon settings">
+                <svg
+                  viewBox="0 0 24 24"
+                  width="20"
+                  height="20"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                  />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </div>
+              <div class="entry-content">
+                <span class="entry-title">{{ getMessage('serverSettingsTitle') }}</span>
+                <span class="entry-desc">{{ getMessage('serverSettingsDesc') }}</span>
+              </div>
+              <svg
+                class="entry-arrow"
+                :class="{ 'entry-arrow-down': configExpanded }"
                 viewBox="0 0 24 24"
                 width="16"
                 height="16"
@@ -528,6 +635,15 @@ const serverStatus = ref<{
 const showMcpConfig = computed(() => {
   return nativeConnectionStatus.value === 'connected' && serverStatus.value.isRunning;
 });
+
+// Status section collapse state
+const statusCollapsed = ref(true);
+const isServiceRunning = computed(() => {
+  return nativeConnectionStatus.value === 'connected' && serverStatus.value.isRunning;
+});
+
+// Config section expanded state (collapsed by default)
+const configExpanded = ref(false);
 
 const copyButtonText = ref(getMessage('copyConfigButton'));
 
@@ -1629,7 +1745,7 @@ onUnmounted(() => {
   font-size: 14px;
   font-weight: 500;
   color: #64748b;
-  margin-bottom: 8px;
+  margin: 0;
 }
 
 .status-info {
@@ -1780,11 +1896,40 @@ onUnmounted(() => {
   background: #2563eb;
 }
 
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.section-header .section-title {
+  margin-bottom: 0;
+}
+
 .section-title {
   font-size: 16px;
   font-weight: 600;
   color: #374151;
   margin-bottom: 12px;
+}
+
+.section-close-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  color: #9ca3af;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.section-close-button:hover {
+  background: #f3f4f6;
+  color: #6b7280;
 }
 .current-model-card {
   background: linear-gradient(135deg, #faf5ff, #f3e8ff);
@@ -1980,6 +2125,34 @@ onUnmounted(() => {
   margin-bottom: 8px;
 }
 
+.status-header.clickable {
+  cursor: pointer;
+  padding: 4px;
+  margin: -4px;
+  border-radius: 6px;
+  transition: background 0.15s ease;
+}
+
+.status-header.clickable:hover {
+  background: #f1f5f9;
+}
+
+.status-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-header-left .status-dot {
+  flex-shrink: 0;
+}
+
+.status-header-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .refresh-status-button {
   background: none;
   border: none;
@@ -1994,6 +2167,32 @@ onUnmounted(() => {
 .refresh-status-button:hover {
   background: #f1f5f9;
   color: #374151;
+}
+
+.expand-status-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  color: #64748b;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.expand-status-button:hover {
+  background: #e2e8f0;
+  color: #374151;
+}
+
+.expand-icon {
+  transition: transform 0.2s ease;
+}
+
+.expand-icon.rotated {
+  transform: rotate(180deg);
 }
 
 .status-timestamp {
@@ -2458,6 +2657,26 @@ onUnmounted(() => {
   color: #059669;
 }
 
+/* 设置按钮 - 灰色/橙色 */
+.rr-icon-btn-settings {
+  background: rgba(107, 114, 128, 0.1);
+  color: #6b7280;
+}
+
+.rr-icon-btn-settings:hover:not(:disabled) {
+  background: rgba(107, 114, 128, 0.2);
+  color: #4b5563;
+}
+
+.rr-icon-btn-settings.active {
+  background: rgba(217, 119, 87, 0.15);
+  color: var(--ac-accent, #d97757);
+}
+
+.rr-icon-btn-settings.active:hover:not(:disabled) {
+  background: rgba(217, 119, 87, 0.25);
+}
+
 /* Coming Soon 按钮样式 */
 .rr-icon-btn-coming-soon {
   opacity: 0.5;
@@ -2583,6 +2802,11 @@ onUnmounted(() => {
   color: #10b981;
 }
 
+.entry-icon.settings {
+  background: rgba(107, 114, 128, 0.12);
+  color: #6b7280;
+}
+
 .entry-icon.model {
   background: rgba(139, 92, 246, 0.12);
   color: #8b5cf6;
@@ -2612,6 +2836,11 @@ onUnmounted(() => {
 .entry-arrow {
   color: var(--ac-text-subtle, #a8a29e);
   flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.entry-arrow-down {
+  transform: rotate(90deg);
 }
 
 /* Coming Soon Badge */
