@@ -181,6 +181,7 @@ import {
   useAgentChatViewRoute,
   useOpenProjectPreference,
   useElementReferences,
+  ELEMENT_REFERENCES_KEY,
   WEB_EDITOR_TX_STATE_INJECTION_KEY,
   AGENT_SERVER_PORT_KEY,
   type AgentThemeId,
@@ -344,6 +345,9 @@ provide(WEB_EDITOR_TX_STATE_INJECTION_KEY, webEditorTxState);
 
 // Provide server port for child components to build attachment URLs
 provide(AGENT_SERVER_PORT_KEY, server.serverPort);
+
+// Provide element references for thread title chips
+provide(ELEMENT_REFERENCES_KEY, elementRefs.allReferences);
 
 // View routing (sessions list vs chat conversation)
 const viewRoute = useAgentChatViewRoute();
@@ -1445,15 +1449,24 @@ async function handleSend(): Promise<void> {
   // Session-level config is now used by backend; no need to pass cliPreference/model
   // For selection context messages, use the user's input as displayText
   // so the chip shows meaningful content instead of a generic label
+  //
+  // IMPORTANT: Always pass messageText as displayText when instruction differs
+  // This preserves @Element_N references for display while sending expanded text to LLM
+  const needsDisplayText = instructionWithContext !== messageText;
+
+  // Extract element references data for persistence (enables hover/click after session switch)
+  const elementReferencesData = elementRefs.extractReferencesForText(messageText);
+
   await chat.send({
     projectId: projects.selectedProjectId.value || undefined,
     dbSessionId,
     // Pass the context-enriched instruction to be sent to server
     instruction: instructionWithContext,
-    // Attach metadata only when selection context exists
-    // Use user's original message as displayText for better UX
-    displayText: selection ? messageText : undefined,
+    // Preserve original text with @Element_N for UI display
+    displayText: needsDisplayText ? messageText : undefined,
     clientMeta: selectionClientMeta,
+    // Persist element references for hover/click functionality after session reload
+    elementReferences: elementReferencesData,
   });
 
   // Clear web editor selection after successful send

@@ -50,8 +50,12 @@ export type {
 } from './useOpenProjectPreference';
 
 // Element References (@Element_N in chat input)
-export { useElementReferences, ELEMENT_REF_PATTERN } from './useElementReferences';
-export type { ElementReferenceData, UseElementReferences } from './useElementReferences';
+export {
+  useElementReferences,
+  ELEMENT_REF_PATTERN,
+  ELEMENT_REFERENCES_KEY,
+} from './useElementReferences';
+export type { UseElementReferences } from './useElementReferences';
 
 // ContentEditable Input (atomic @Element_N chips)
 export {

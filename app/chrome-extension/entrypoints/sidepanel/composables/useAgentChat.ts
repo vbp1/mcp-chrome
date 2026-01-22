@@ -279,6 +279,14 @@ export function useAgentChat(options: UseAgentChatOptions) {
        * Used for special UI rendering (e.g., web editor apply/selection chips).
        */
       clientMeta?: AgentActRequestClientMeta;
+      /**
+       * Optional element references data to persist with the user message.
+       * Enables hover/click functionality for @Element_N chips after session reload.
+       */
+      elementReferences?: Record<
+        string,
+        { fullText: string; summary: string; selector: string; pageUrl: string }
+      >;
     } = {},
   ): Promise<void> {
     // User-visible content is always the user's raw input
@@ -307,6 +315,8 @@ export function useAgentChat(options: UseAgentChatOptions) {
     // Create optimistic user message for immediate feedback
     // Note: Use userText for UI, not instructionText (which may contain injected context)
     const tempMessageId = `temp-${Date.now()}`;
+    const hasMetadata =
+      chatOptions.displayText || chatOptions.clientMeta || chatOptions.elementReferences;
     const optimisticMessage: AgentMessage = {
       id: tempMessageId,
       sessionId: sessionId,
@@ -316,13 +326,13 @@ export function useAgentChat(options: UseAgentChatOptions) {
       requestId, // Include requestId so we can match with server-echoed message
       createdAt: new Date().toISOString(),
       // Include metadata for immediate chip rendering (before server echo)
-      metadata:
-        chatOptions.displayText || chatOptions.clientMeta
-          ? {
-              displayText: chatOptions.displayText?.trim(),
-              clientMeta: chatOptions.clientMeta,
-            }
-          : undefined,
+      metadata: hasMetadata
+        ? {
+            displayText: chatOptions.displayText?.trim(),
+            clientMeta: chatOptions.clientMeta,
+            elementReferences: chatOptions.elementReferences,
+          }
+        : undefined,
     };
 
     // Add user message immediately
@@ -335,6 +345,8 @@ export function useAgentChat(options: UseAgentChatOptions) {
       // Optional metadata for special UI rendering (stored with the user message)
       displayText: chatOptions.displayText?.trim() || undefined,
       clientMeta: chatOptions.clientMeta,
+      // Persist element references for hover/click after session reload
+      elementReferences: chatOptions.elementReferences,
       cliPreference: chatOptions.cliPreference
         ? (chatOptions.cliPreference as AgentCliPreference)
         : undefined,

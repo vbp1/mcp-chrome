@@ -127,6 +127,8 @@ export interface ThreadHeader {
   fullContent: string;
   /** Web editor apply metadata */
   webEditorApply?: WebEditorApplyMeta;
+  /** Element references data for @Element_N chips (hover/click) */
+  elementReferences?: Record<string, import('chrome-mcp-shared').ElementReferenceData>;
 }
 
 /** A grouped conversation thread */
@@ -628,6 +630,13 @@ function buildThreads(
 
       const displayText = typeof rawDisplayText === 'string' ? rawDisplayText : undefined;
 
+      // Extract element references data for @Element_N chips
+      const rawElementRefs = meta.elementReferences;
+      const elementReferences =
+        rawElementRefs && typeof rawElementRefs === 'object' && !Array.isArray(rawElementRefs)
+          ? (rawElementRefs as Record<string, import('chrome-mcp-shared').ElementReferenceData>)
+          : undefined;
+
       // Store attachments for thread header display
       if (attachments.length > 0) {
         group.attachments = attachments;
@@ -639,11 +648,21 @@ function buildThreads(
           displayText: displayText || `Apply ${clientMeta.elementCount ?? 0} changes`,
           fullContent,
           webEditorApply: clientMeta,
+          elementReferences,
         };
         // Use display text as title for web editor apply messages
         group.title = displayText || `Apply ${clientMeta.elementCount ?? 0} changes`;
-      } else if (fullContent) {
-        group.title = fullContent;
+      } else if (displayText || fullContent) {
+        // Prefer displayText (preserves @Element_N references) over fullContent (expanded)
+        group.title = displayText || fullContent;
+        // Create header with element references if present
+        if (elementReferences) {
+          group.header = {
+            displayText,
+            fullContent,
+            elementReferences,
+          };
+        }
       } else {
         // Image-only message - use attachment count as title
         group.title =

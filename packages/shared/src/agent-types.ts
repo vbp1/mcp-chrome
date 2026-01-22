@@ -25,6 +25,21 @@ export interface AgentMessage {
   metadata?: Record<string, unknown>;
 }
 
+/**
+ * Element reference data for @Element_N chips.
+ * Stores metadata needed for tooltip display and browser highlighting.
+ */
+export interface ElementReferenceData {
+  /** The full markdown text sent to LLM */
+  fullText: string;
+  /** Short summary for tooltip display */
+  summary: string;
+  /** CSS selector for element identification */
+  selector: string;
+  /** Page URL where element was captured */
+  pageUrl: string;
+}
+
 // ============================================================
 // Stream Events
 // ============================================================
@@ -118,6 +133,12 @@ export interface AgentActRequest {
    * When set, UI should display this instead of raw instruction.
    */
   displayText?: string;
+  /**
+   * Optional element references data to persist with the user message.
+   * Enables hover/click functionality for @Element_N chips after session reload.
+   * Keys are element numbers (as strings), values contain element metadata.
+   */
+  elementReferences?: Record<string, ElementReferenceData>;
 }
 
 export interface AgentActResponse {

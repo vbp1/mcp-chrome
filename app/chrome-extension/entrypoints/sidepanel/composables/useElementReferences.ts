@@ -1,7 +1,16 @@
-import { ref, computed } from 'vue';
+import { ref, computed, type InjectionKey, type Ref } from 'vue';
+import type { ElementReferenceData } from 'chrome-mcp-shared';
+
+/**
+ * Injection key for element references map.
+ * Provided by AgentChat.vue for child components to access element data.
+ */
+export const ELEMENT_REFERENCES_KEY: InjectionKey<Ref<Map<number, ElementReferenceData>>> =
+  Symbol('elementReferences');
 
 /**
  * Element reference data stored for each @Element_N reference
+ * @deprecated Use ElementReferenceData from chrome-mcp-shared instead
  */
 export interface ElementReferenceData {
   /** The full markdown text to send to LLM */
@@ -146,6 +155,28 @@ export function useElementReferences() {
     }
   }
 
+  /**
+   * Extract references data for all @Element_N in text
+   * Used when saving message to persist reference data
+   * Returns a record of { "1": {...}, "2": {...} } for serialization
+   */
+  function extractReferencesForText(
+    text: string,
+  ): Record<string, ElementReferenceData> | undefined {
+    const nums = findReferencesInText(text);
+    if (nums.length === 0) return undefined;
+
+    const result: Record<string, ElementReferenceData> = {};
+    for (const num of nums) {
+      const ref = references.value.get(num);
+      if (ref) {
+        result[String(num)] = ref;
+      }
+    }
+
+    return Object.keys(result).length > 0 ? result : undefined;
+  }
+
   return {
     // State
     counter,
@@ -161,6 +192,7 @@ export function useElementReferences() {
     findBrokenReferences,
     cleanBrokenReferences,
     pruneUnusedReferences,
+    extractReferencesForText,
     reset,
   };
 }
