@@ -323,10 +323,10 @@
 
       .em-attribute-value {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         gap: 10px;
         min-height: 44px;
-        padding: 0 12px 0 16px;
+        padding: 10px 12px 10px 16px;
         background: #f5f5f5;
         border-radius: 10px;
       }
@@ -362,6 +362,8 @@
         font-size: 14px;
         color: #404040;
         user-select: text;
+        word-break: break-all;
+        white-space: pre-wrap;
       }
 
       .em-attribute-text.empty {
@@ -2090,7 +2092,7 @@
 
     if (selectorText) selectorText.textContent = sel;
     if (selectorDisplay) selectorDisplay.textContent = sel;
-    if (inputName && !inputName.value) inputName.value = name;
+    if (inputName) inputName.value = name;
 
     moveHighlighterTo(el);
   }

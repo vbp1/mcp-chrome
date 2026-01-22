@@ -34,8 +34,10 @@ export interface ElementReferenceData {
   fullText: string;
   /** Short summary for tooltip display */
   summary: string;
-  /** CSS selector for element identification */
+  /** CSS or XPath selector for element identification */
   selector: string;
+  /** Selector type: 'css' or 'xpath' */
+  selectorType: 'css' | 'xpath';
   /** Page URL where element was captured */
   pageUrl: string;
 }

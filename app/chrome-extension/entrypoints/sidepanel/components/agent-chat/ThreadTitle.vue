@@ -43,6 +43,7 @@ interface ElementSegment {
   elementNum: number;
   summary?: string;
   selector?: string;
+  selectorType?: 'css' | 'xpath';
   pageUrl?: string;
 }
 
@@ -91,6 +92,7 @@ const segments = computed<Segment[]>(() => {
       elementNum,
       summary: refData?.summary,
       selector: refData?.selector,
+      selectorType: refData?.selectorType,
       pageUrl: refData?.pageUrl,
     });
 
@@ -137,7 +139,7 @@ async function handleChipClick(segment: ElementSegment): Promise<void> {
     await chrome.tabs.sendMessage(tab.id, {
       action: 'element_marker_highlight',
       selector: segment.selector,
-      selectorType: 'css',
+      selectorType: segment.selectorType || 'css',
       listMode: false,
     });
 

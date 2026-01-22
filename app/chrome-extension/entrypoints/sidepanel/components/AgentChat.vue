@@ -832,7 +832,7 @@ async function handleElementChipClick(
     await chrome.tabs.sendMessage(tabId, {
       action: 'element_marker_highlight',
       selector: data.selector,
-      selectorType: 'css',
+      selectorType: data.selectorType || 'css',
       listMode: false,
     });
   } catch (error) {
@@ -1337,24 +1337,20 @@ async function checkAndInsertPendingElement(): Promise<void> {
     // Create full text for LLM
     const fullText = formatElementMarkerInfoForChat(elementInfo);
 
-    // Create short summary for tooltip
-    const summaryParts: string[] = [];
-    summaryParts.push(`<${elementInfo.tagName}>`);
-    if (elementInfo.id) summaryParts.push(`#${elementInfo.id}`);
-    if (elementInfo.classes?.length)
-      summaryParts.push(`.${elementInfo.classes.slice(0, 2).join('.')}`);
-    if (elementInfo.text) {
-      const shortText =
-        elementInfo.text.length > 30 ? elementInfo.text.slice(0, 27) + '...' : elementInfo.text;
-      summaryParts.push(`"${shortText}"`);
-    }
-    const summary = summaryParts.join(' ');
+    // Create short summary for tooltip - use selector directly from Element Marker
+    const typeLabel = elementInfo.selectorType === 'xpath' ? 'XPath' : 'CSS';
+    const selectorShort =
+      elementInfo.selector.length > 60
+        ? elementInfo.selector.slice(0, 57) + '...'
+        : elementInfo.selector;
+    const summary = `[${typeLabel}] ${selectorShort}`;
 
     // Add reference and get @Element_N
     const refData: ElementReferenceData = {
       fullText,
       summary,
       selector: elementInfo.selector,
+      selectorType: elementInfo.selectorType || 'css',
       pageUrl: elementInfo.pageUrl,
     };
     const elementRef = elementRefs.addReference(refData);

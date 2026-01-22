@@ -19,6 +19,8 @@ export interface ElementReferenceData {
   summary: string;
   /** Original selector for identification */
   selector: string;
+  /** Selector type: 'css' or 'xpath' */
+  selectorType: 'css' | 'xpath';
   /** Page URL where element was captured */
   pageUrl: string;
 }
