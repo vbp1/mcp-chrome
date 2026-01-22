@@ -187,13 +187,14 @@ export class AgentChatService {
     }
 
     // Build metadata object for user message
-    // Include attachments, clientMeta, and displayText if present
+    // Include attachments, clientMeta, displayText, and elementReferences if present
     let userMessageMetadata: Record<string, unknown> | undefined;
     const hasAttachments = attachmentMetadata && attachmentMetadata.length > 0;
     const hasClientMeta = payload.clientMeta !== undefined;
     const hasDisplayText = payload.displayText !== undefined;
+    const hasElementReferences = payload.elementReferences !== undefined;
 
-    if (hasAttachments || hasClientMeta || hasDisplayText) {
+    if (hasAttachments || hasClientMeta || hasDisplayText || hasElementReferences) {
       userMessageMetadata = {};
       if (hasAttachments) {
         userMessageMetadata.attachments = attachmentMetadata;
@@ -203,6 +204,9 @@ export class AgentChatService {
       }
       if (hasDisplayText) {
         userMessageMetadata.displayText = payload.displayText;
+      }
+      if (hasElementReferences) {
+        userMessageMetadata.elementReferences = payload.elementReferences;
       }
     }
 
