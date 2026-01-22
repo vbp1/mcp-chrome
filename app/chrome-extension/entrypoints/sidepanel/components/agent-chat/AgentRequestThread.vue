@@ -2,24 +2,42 @@
   <div ref="rootRef" class="group">
     <!-- User Query Header -->
     <div class="mb-4">
-      <div class="flex justify-between items-start">
-        <!-- Special rendering for web editor apply messages -->
-        <ApplyMessageChip v-if="thread.header?.webEditorApply" :header="thread.header" />
+      <div class="flex justify-between items-start gap-3">
+        <!-- User icon + content -->
+        <div class="flex items-start gap-2 flex-1 min-w-0">
+          <!-- Human icon -->
+          <div
+            class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center mt-0.5"
+            :style="{
+              backgroundColor: 'var(--ac-surface-muted)',
+              color: 'var(--ac-text-muted)',
+            }"
+          >
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+              />
+            </svg>
+          </div>
 
-        <!-- Default title rendering for regular messages -->
-        <h2
-          v-else
-          class="text-lg font-medium leading-snug"
-          :style="{
-            color: 'var(--ac-text)',
-          }"
-        >
-          {{ thread.title }}
-        </h2>
+          <!-- Special rendering for web editor apply messages -->
+          <ApplyMessageChip v-if="thread.header?.webEditorApply" :header="thread.header" />
+
+          <!-- Default title rendering for regular messages -->
+          <ThreadTitle v-else :title="thread.title" :metadata="thread.header" />
+        </div>
 
         <!-- Edit button (placeholder, appears on hover) -->
         <button
-          class="opacity-0 group-hover:opacity-100 transition-opacity p-1 cursor-pointer"
+          class="opacity-0 group-hover:opacity-100 transition-opacity p-1 cursor-pointer flex-shrink-0"
           :style="{ color: 'var(--ac-text-subtle)' }"
           title="Edit (coming soon)"
         >
@@ -152,6 +170,7 @@ import type { AgentThread } from '../../composables/useAgentThreads';
 import { AGENT_SERVER_PORT_KEY } from '../../composables';
 import AgentTimeline from './AgentTimeline.vue';
 import ApplyMessageChip from './ApplyMessageChip.vue';
+import ThreadTitle from './ThreadTitle.vue';
 
 const props = defineProps<{
   thread: AgentThread;

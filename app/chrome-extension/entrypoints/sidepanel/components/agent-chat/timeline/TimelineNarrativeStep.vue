@@ -1,26 +1,48 @@
 <template>
   <div class="py-1">
-    <div
-      class="text-sm leading-relaxed markdown-content"
-      :style="{
-        color: 'var(--ac-text)',
-        fontFamily: 'var(--ac-font-body)',
-      }"
-    >
-      <MarkdownRender
-        :content="item.text ?? ''"
-        :custom-id="AGENTCHAT_MD_SCOPE"
-        :custom-html-tags="CUSTOM_HTML_TAGS"
-        :max-live-nodes="0"
-        :render-batch-size="16"
-        :render-batch-delay="8"
-      />
+    <div class="flex items-start gap-2">
+      <!-- Robot icon -->
+      <div
+        class="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center mt-0.5"
+        :style="{
+          backgroundColor: 'var(--ac-accent)',
+          color: 'var(--ac-accent-contrast)',
+        }"
+      >
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+          />
+        </svg>
+      </div>
+
+      <!-- Response content -->
+      <div class="flex-1 min-w-0">
+        <div
+          class="text-sm leading-relaxed markdown-content"
+          :style="{
+            color: 'var(--ac-text)',
+            fontFamily: 'var(--ac-font-body)',
+          }"
+        >
+          <MarkdownRender
+            :content="item.text ?? ''"
+            :custom-id="AGENTCHAT_MD_SCOPE"
+            :custom-html-tags="CUSTOM_HTML_TAGS"
+            :max-live-nodes="0"
+            :render-batch-size="16"
+            :render-batch-delay="8"
+          />
+        </div>
+        <span
+          v-if="item.isStreaming"
+          class="inline-block w-1.5 h-4 ml-0.5 ac-pulse"
+          :style="{ backgroundColor: 'var(--ac-accent)' }"
+        />
+      </div>
     </div>
-    <span
-      v-if="item.isStreaming"
-      class="inline-block w-1.5 h-4 ml-0.5 ac-pulse"
-      :style="{ backgroundColor: 'var(--ac-accent)' }"
-    />
   </div>
 </template>
 
