@@ -1342,8 +1342,9 @@ onUnmounted(() => {
 /* Bottom row: selector + tags */
 .em-marker-row-bottom {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
+  min-width: 0;
 }
 
 .em-marker-selector {
@@ -1351,14 +1352,12 @@ onUnmounted(() => {
   font-family: var(--ac-font-mono, 'Monaco', 'Menlo', 'Ubuntu Mono', monospace);
   color: var(--ac-text-muted, #737373);
   background: var(--ac-surface-muted, #f5f5f5);
-  padding: 2px 6px;
+  padding: 4px 6px;
   border-radius: 4px;
   flex: 1;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  cursor: help;
+  word-break: break-all;
+  white-space: pre-wrap;
 }
 
 .em-marker-tags {
