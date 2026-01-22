@@ -107,26 +107,25 @@
               {{ attachmentError }}
             </div>
 
-            <!-- Expanded textarea with fake caret -->
+            <!-- Expanded contenteditable input -->
             <div class="relative flex-1 min-h-0 flex flex-col">
-              <textarea
-                ref="textareaRef"
-                :value="modelValue"
-                class="w-full flex-1 min-h-0 bg-transparent border-none focus:ring-0 focus:outline-none resize-none p-3 text-sm"
-                :style="textareaStyle"
-                :placeholder="placeholder"
-                @input="handleInput"
-                @keydown.enter.meta.exact.prevent="handleModifierEnter"
-                @keydown.enter.ctrl.exact.prevent="handleModifierEnter"
-                @paste="handlePaste"
-              />
+              <!-- Placeholder (shown when empty) -->
+              <div
+                v-if="!modelValue"
+                class="absolute left-3 top-3 text-sm pointer-events-none z-10"
+                :style="{ color: 'var(--ac-text-subtle)', fontFamily: 'var(--ac-font-body)' }"
+              >
+                {{ placeholder }}
+              </div>
 
-              <!-- Fake caret overlay (opt-in comet effect, only mount when enabled) -->
-              <FakeCaretOverlay
-                v-if="enableFakeCaret"
-                :textarea-ref="textareaRef"
-                :enabled="true"
-                :value="modelValue"
+              <div
+                ref="inputRef"
+                contenteditable="true"
+                class="w-full flex-1 min-h-0 bg-transparent border-none focus:ring-0 focus:outline-none resize-none p-3 text-sm overflow-auto"
+                :style="inputStyle"
+                @input="handleInputEvent"
+                @keydown="handleKeyDown"
+                @paste="handlePasteEvent"
               />
             </div>
 
@@ -165,10 +164,11 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, computed, watch, nextTick, onMounted } from 'vue';
+import { ref, computed, watch, nextTick, onMounted, toRef } from 'vue';
 import type { AttachmentWithPreview } from '../../composables/useAttachments';
 import type { RequestState } from '../../composables/useAgentChat';
-import FakeCaretOverlay from './FakeCaretOverlay.vue';
+import { useContentEditableInput } from '../../composables/useContentEditableInput';
+import type { ElementReferenceData } from '../../composables/useElementReferences';
 
 const props = defineProps<{
   /** Whether the drawer is open */
@@ -191,8 +191,8 @@ const props = defineProps<{
   canCancel: boolean;
   /** Whether send is available */
   canSend: boolean;
-  /** Fake caret feature flag */
-  enableFakeCaret?: boolean;
+  /** Element references for @Element_N highlighting */
+  elementReferences?: Map<number, ElementReferenceData>;
 }>();
 
 /**
@@ -216,8 +216,34 @@ const emit = defineEmits<{
   paste: [event: ClipboardEvent];
 }>();
 
-const textareaRef = ref<HTMLTextAreaElement | null>(null);
+const inputRef = ref<HTMLDivElement | null>(null);
 const teleportTarget = ref<Element | null>(null);
+
+// Create refs for the composable
+const valueRef = toRef(props, 'modelValue');
+const referencesRef = computed(
+  () => props.elementReferences ?? new Map<number, ElementReferenceData>(),
+);
+
+const {
+  handleInput: handleContentEditableInput,
+  handleKeyDown,
+  handlePaste: handleContentEditablePaste,
+  focus: focusInput,
+} = useContentEditableInput({
+  containerRef: inputRef,
+  value: valueRef,
+  references: referencesRef,
+  minHeight: 100, // Drawer has more space
+  maxHeight: 2000, // Drawer can be tall
+  onInput: (value: string) => emit('update:modelValue', value),
+  onSubmit: () => {
+    if (props.canSend && !props.sending) {
+      emit('submit');
+    }
+  },
+  requireModifierForSubmit: true, // Cmd/Ctrl+Enter to submit in drawer
+});
 
 // Detect OS for keyboard shortcut display
 const modifierKey = computed(() => {
@@ -260,12 +286,14 @@ const filenameOverlayStyle = computed(() => ({
   color: 'white',
 }));
 
-const textareaStyle = computed(() => ({
+const inputStyle = computed(() => ({
   fontFamily: 'var(--ac-font-body)',
   color: 'var(--ac-text)',
   backgroundColor: 'var(--ac-surface-muted)',
   border: 'var(--ac-border-width) solid var(--ac-border)',
   borderRadius: 'var(--ac-radius-card)',
+  whiteSpace: 'pre-wrap',
+  wordBreak: 'break-word',
 }));
 
 const cancelButtonStyle = computed(() => ({
@@ -282,23 +310,27 @@ const sendButtonStyle = computed(() => ({
 }));
 
 // Event handlers
-function handleInput(event: Event): void {
-  const value = (event.target as HTMLTextAreaElement).value;
-  emit('update:modelValue', value);
-}
-
-function handleModifierEnter(): void {
-  if (props.canSend && !props.sending) {
-    emit('submit');
-  }
+function handleInputEvent(event: Event): void {
+  handleContentEditableInput(event);
 }
 
 function handleSubmit(): void {
   emit('submit');
 }
 
-function handlePaste(event: ClipboardEvent): void {
-  emit('paste', event);
+function handlePasteEvent(event: ClipboardEvent): void {
+  // Check for images - emit to parent for handling
+  const items = event.clipboardData?.items;
+  if (items) {
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        emit('paste', event);
+        return;
+      }
+    }
+  }
+  // Text paste handled by contenteditable composable
+  handleContentEditablePaste(event);
 }
 
 // Escape key handler for document-level capture (handles cases where focus is elsewhere)
@@ -308,13 +340,13 @@ function handleEscapeKey(e: KeyboardEvent): void {
   }
 }
 
-// Focus textarea when drawer opens, and setup/cleanup Escape key listener
+// Focus input when drawer opens, and setup/cleanup Escape key listener
 watch(
   () => props.open,
   async (isOpen, _prevOpen, onCleanup) => {
     if (isOpen) {
       await nextTick();
-      textareaRef.value?.focus();
+      focusInput();
 
       // Add document-level Escape listener
       document.addEventListener('keydown', handleEscapeKey);
@@ -338,7 +370,7 @@ onMounted(() => {
 
 // Expose focus method
 defineExpose({
-  focus: () => textareaRef.value?.focus(),
+  focus: focusInput,
 });
 </script>
 
@@ -367,5 +399,10 @@ defineExpose({
 .composer-drawer-enter-from .composer-drawer-sheet,
 .composer-drawer-leave-to .composer-drawer-sheet {
   transform: translateY(100%);
+}
+
+/* Contenteditable focus outline */
+[contenteditable='true']:focus {
+  outline: none;
 }
 </style>

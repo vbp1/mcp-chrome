@@ -69,7 +69,6 @@
             :available-models="currentAvailableModels"
             :reasoning-effort="currentReasoningEffort"
             :available-reasoning-efforts="currentAvailableReasoningEfforts"
-            :enable-fake-caret="inputPreferences.fakeCaretEnabled.value"
             :element-references="elementRefs.allReferences.value"
             @update:model-value="handleInputChange"
             @submit="handleSend"
@@ -136,11 +135,9 @@
     <AgentSettingsMenu
       :open="settingsMenuOpen"
       :theme="themeState.theme.value"
-      :fake-caret-enabled="inputPreferences.fakeCaretEnabled.value"
       @theme:set="handleThemeChange"
       @reconnect="handleReconnect"
       @attachments:open="handleOpenAttachmentCache"
-      @fake-caret:toggle="handleFakeCaretToggle"
     />
 
     <AgentOpenProjectMenu
@@ -182,7 +179,6 @@ import {
   useWebEditorTxState,
   useAgentChatViewRoute,
   useOpenProjectPreference,
-  useAgentInputPreferences,
   useElementReferences,
   WEB_EDITOR_TX_STATE_INJECTION_KEY,
   AGENT_SERVER_PORT_KEY,
@@ -339,7 +335,6 @@ const themeState = useAgentTheme();
 const openProjectPreference = useOpenProjectPreference({
   getServerPort: () => server.serverPort.value,
 });
-const inputPreferences = useAgentInputPreferences();
 
 // Initialize Web Editor TX state at root level and provide to children
 // This prevents duplicate listener registration in child components
@@ -631,11 +626,6 @@ function closeMenus(): void {
 async function handleThemeChange(theme: AgentThemeId): Promise<void> {
   await themeState.setTheme(theme);
   closeMenus();
-}
-
-// Fake caret toggle handler
-async function handleFakeCaretToggle(enabled: boolean): Promise<void> {
-  await inputPreferences.setFakeCaretEnabled(enabled);
 }
 
 // Server reconnect
@@ -1510,9 +1500,6 @@ onMounted(async () => {
 
   // Load open project preference
   await openProjectPreference.loadDefaultTarget();
-
-  // Load input preferences (fake caret, etc.)
-  await inputPreferences.init();
 
   // Initialize server
   await server.initialize();

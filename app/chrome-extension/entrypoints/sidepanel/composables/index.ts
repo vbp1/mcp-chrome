@@ -42,17 +42,6 @@ export { useRRV3Debugger } from './useRRV3Debugger';
 export type { UseRRV3Rpc, UseRRV3RpcOptions, RpcRequestOptions } from './useRRV3Rpc';
 export type { UseRRV3Debugger, UseRRV3DebuggerOptions } from './useRRV3Debugger';
 
-// Textarea Auto-Resize
-export { useTextareaAutoResize } from './useTextareaAutoResize';
-export type {
-  UseTextareaAutoResizeOptions,
-  UseTextareaAutoResizeReturn,
-} from './useTextareaAutoResize';
-
-// Fake Caret (comet tail animation)
-export { useFakeCaret } from './useFakeCaret';
-export type { UseFakeCaretOptions, UseFakeCaretReturn, FakeCaretTrailPoint } from './useFakeCaret';
-
 // Open Project Preference
 export { useOpenProjectPreference } from './useOpenProjectPreference';
 export type {
@@ -60,10 +49,17 @@ export type {
   UseOpenProjectPreference,
 } from './useOpenProjectPreference';
 
-// Agent Input Preferences (fake caret, etc.)
-export { useAgentInputPreferences } from './useAgentInputPreferences';
-export type { UseAgentInputPreferences } from './useAgentInputPreferences';
-
 // Element References (@Element_N in chat input)
 export { useElementReferences, ELEMENT_REF_PATTERN } from './useElementReferences';
 export type { ElementReferenceData, UseElementReferences } from './useElementReferences';
+
+// ContentEditable Input (atomic @Element_N chips)
+export {
+  useContentEditableInput,
+  parseTextToNodes,
+  serializeNodesToText,
+} from './useContentEditableInput';
+export type {
+  UseContentEditableInputOptions,
+  UseContentEditableInputReturn,
+} from './useContentEditableInput';

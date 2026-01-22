@@ -96,44 +96,37 @@
         boxShadow: 'var(--ac-shadow-float)',
       }"
     >
-      <!-- Textarea wrapper with expand button -->
+      <!-- Contenteditable input with expand button -->
       <div class="relative">
-        <textarea
-          ref="textareaRef"
-          :value="modelValue"
+        <!-- Placeholder (shown when empty) -->
+        <div
+          v-if="!modelValue"
+          class="absolute left-3 top-3 text-sm pointer-events-none"
+          :style="{ color: 'var(--ac-text-subtle)', fontFamily: 'var(--ac-font-body)' }"
+        >
+          {{ placeholder }}
+        </div>
+
+        <div
+          ref="inputRef"
+          contenteditable="true"
           :class="[
             'w-full bg-transparent border-none focus:ring-0 focus:outline-none resize-none p-3 text-sm',
             showExpandButton ? 'pr-10' : '',
           ]"
           :style="{
-            height: `${textareaHeight}px`,
+            height: `${inputHeight}px`,
             minHeight: `${MIN_HEIGHT}px`,
             maxHeight: `${MAX_HEIGHT}px`,
             overflowY: isOverflowing ? 'auto' : 'hidden',
             fontFamily: 'var(--ac-font-body)',
             color: 'var(--ac-text)',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
           }"
-          :placeholder="placeholder"
-          rows="1"
-          @input="handleInput"
-          @keydown.enter.exact.prevent="handleEnter"
+          @input="handleInputEvent"
+          @keydown="handleKeyDown"
           @paste="handlePaste"
-        />
-
-        <!-- Element reference highlight overlay -->
-        <ElementRefOverlay
-          v-if="elementReferences"
-          :textarea-ref="textareaRef"
-          :value="modelValue"
-          :references="elementReferences"
-        />
-
-        <!-- Fake caret overlay (opt-in comet effect, only mount when enabled) -->
-        <FakeCaretOverlay
-          v-if="enableFakeCaret"
-          :textarea-ref="textareaRef"
-          :enabled="true"
-          :value="modelValue"
         />
 
         <!-- Expand button (visible when content exceeds max height) -->
@@ -336,7 +329,7 @@
       :cancelling="cancelling"
       :can-cancel="canCancel"
       :can-send="canSend"
-      :enable-fake-caret="enableFakeCaret"
+      :element-references="elementReferences"
       @close="closeDrawer"
       @update:model-value="handleDrawerInput"
       @submit="handleSubmit"
@@ -421,12 +414,10 @@ import type { CodexReasoningEffort } from 'chrome-mcp-shared';
 import type { ModelDefinition } from '@/common/agent-models';
 import type { AttachmentWithPreview } from '../../composables/useAttachments';
 import type { RequestState } from '../../composables/useAgentChat';
-import { useTextareaAutoResize } from '../../composables/useTextareaAutoResize';
+import { useContentEditableInput } from '../../composables/useContentEditableInput';
 import type { ElementReferenceData } from '../../composables/useElementReferences';
 import { getMessage } from '@/utils/i18n';
 import ComposerDrawer from './ComposerDrawer.vue';
-import FakeCaretOverlay from './FakeCaretOverlay.vue';
-import ElementRefOverlay from './ElementRefOverlay.vue';
 
 const props = defineProps<{
   modelValue: string;
@@ -449,8 +440,6 @@ const props = defineProps<{
   // Codex reasoning effort props
   reasoningEffort?: CodexReasoningEffort;
   availableReasoningEfforts?: readonly CodexReasoningEffort[];
-  // Fake caret feature flag
-  enableFakeCaret?: boolean;
   // Element references for @Element_N highlighting
   elementReferences?: Map<number, ElementReferenceData>;
 }>();
@@ -584,20 +573,43 @@ const emit = defineEmits<{
   'session:reset': [];
 }>();
 
-const textareaRef = ref<HTMLTextAreaElement | null>(null);
+const inputRef = ref<HTMLDivElement | null>(null);
 
 // =============================================================================
-// Textarea Auto-Resize
+// ContentEditable Input
 // =============================================================================
 
 const MIN_HEIGHT = 50;
 const MAX_HEIGHT = 200;
 
-const { height: textareaHeight, isOverflowing } = useTextareaAutoResize({
-  textareaRef,
-  value: toRef(props, 'modelValue'),
+// Create refs for the composable
+const valueRef = toRef(props, 'modelValue');
+const referencesRef = computed(
+  () => props.elementReferences ?? new Map<number, ElementReferenceData>(),
+);
+
+const {
+  height: inputHeight,
+  isOverflowing,
+  handleInput: handleContentEditableInput,
+  handleKeyDown,
+  handlePaste: handleContentEditablePaste,
+  focus: focusInput,
+} = useContentEditableInput({
+  containerRef: inputRef,
+  value: valueRef,
+  references: referencesRef,
   minHeight: MIN_HEIGHT,
   maxHeight: MAX_HEIGHT,
+  onInput: (value: string) => emit('update:modelValue', value),
+  onSubmit: () => {
+    // Don't submit when request is active (button shows Stop, not Send)
+    if (isRequestActive.value) return;
+    if (props.canSend && !props.sending) {
+      emit('submit');
+    }
+  },
+  requireModifierForSubmit: false,
 });
 
 // Show expand button when content exceeds max height
@@ -623,9 +635,9 @@ function openDrawer(): void {
 
 function closeDrawer(): void {
   isDrawerOpen.value = false;
-  // Focus back to main textarea
+  // Focus back to main input
   nextTick(() => {
-    textareaRef.value?.focus();
+    focusInput();
   });
 }
 
@@ -637,17 +649,8 @@ function handleDrawerInput(value: string): void {
 // Input Handlers
 // =============================================================================
 
-function handleInput(event: Event): void {
-  const value = (event.target as HTMLTextAreaElement).value;
-  emit('update:modelValue', value);
-}
-
-function handleEnter(): void {
-  // Don't send when request is active (button shows Stop, not Send)
-  if (isRequestActive.value) return;
-  if (props.canSend && !props.sending) {
-    emit('submit');
-  }
+function handleInputEvent(event: Event): void {
+  handleContentEditableInput(event);
 }
 
 function handleSubmit(): void {
@@ -712,7 +715,7 @@ function handleDrop(event: DragEvent): void {
   }
 }
 
-// Paste handler - delegate to parent
+// Paste handler - handle images via parent, text via contenteditable
 function handlePaste(event: ClipboardEvent): void {
   if (supportsImages.value) {
     // Check if clipboard contains images
@@ -726,12 +729,13 @@ function handlePaste(event: ClipboardEvent): void {
       }
     }
   }
-  // Let text paste through normally
+  // Let contenteditable handle text paste
+  handleContentEditablePaste(event);
 }
 
 // Expose ref for parent focus control
 defineExpose({
-  focus: () => textareaRef.value?.focus(),
+  focus: focusInput,
 });
 </script>
 
@@ -748,5 +752,35 @@ defineExpose({
 .expand-btn-leave-to {
   opacity: 0;
   transform: scale(0.9);
+}
+
+/* Contenteditable focus outline */
+[contenteditable='true']:focus {
+  outline: none;
+}
+
+/* Empty contenteditable min-height for BR */
+[contenteditable='true']:empty::before {
+  content: '';
+}
+</style>
+
+<style>
+/* Global styles for element chips (needed because they're dynamically created) */
+.element-chip {
+  display: inline;
+  background-color: var(--ac-accent);
+  color: var(--ac-accent-contrast);
+  border-radius: 3px;
+  padding: 0 3px;
+  margin: 0 1px;
+  font-weight: 500;
+  user-select: all;
+  cursor: default;
+}
+
+.element-chip--invalid {
+  background-color: var(--ac-error);
+  opacity: 0.7;
 }
 </style>
