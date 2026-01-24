@@ -118,70 +118,29 @@
           </div>
         </div>
 
-        <!-- Quick Tools Card -->
+        <!-- Tools Card -->
         <div class="section">
-          <h2 class="section-title">{{ getMessage('quickToolsLabel') }}</h2>
-          <div class="rr-icon-buttons">
-            <button
-              class="rr-icon-btn rr-icon-btn-record rr-icon-btn-coming-soon has-tooltip"
-              @click="startRecording"
-              :data-tooltip="getMessage('recordingComingSoon')"
-            >
-              <RecordIcon :recording="false" />
-            </button>
-            <button
-              class="rr-icon-btn rr-icon-btn-stop rr-icon-btn-coming-soon has-tooltip"
-              @click="stopRecording"
-              :data-tooltip="getMessage('recordingComingSoon')"
-            >
-              <StopIcon />
-            </button>
-            <button
-              class="rr-icon-btn rr-icon-btn-edit has-tooltip"
-              @click="toggleWebEditor"
-              :data-tooltip="getMessage('webEditorTooltip')"
-            >
-              <EditIcon />
-            </button>
-            <button
-              class="rr-icon-btn rr-icon-btn-marker has-tooltip"
-              @click="toggleElementMarker"
-              :data-tooltip="getMessage('elementMarkerTooltip')"
-            >
-              <MarkerIcon />
-            </button>
-            <button
-              class="rr-icon-btn rr-icon-btn-settings has-tooltip"
-              :class="{ active: configExpanded }"
-              @click="configExpanded = !configExpanded"
-              :data-tooltip="getMessage('serverSettingsTooltip')"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                width="24"
-                height="24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
+          <h2 class="section-title">{{ getMessage('toolsLabel') }}</h2>
+          <div>
+            <!-- Horizontal buttons row -->
+            <div class="rr-icon-buttons management-buttons-row">
+              <button
+                v-for="entry in managementEntries"
+                :key="entry.id"
+                class="rr-icon-btn"
+                :class="[
+                  entry.btnClass,
+                  {
+                    'rr-icon-btn-coming-soon': entry.comingSoon,
+                    'rr-icon-btn-active': entry.id === activeEntryId,
+                  },
+                ]"
+                @click="entry.action"
+                @mouseenter="hoveredEntry = entry.id"
               >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                />
-                <circle cx="12" cy="12" r="3" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        <!-- Management Entries Card -->
-        <div class="section">
-          <h2 class="section-title">{{ getMessage('managementEntriesLabel') }}</h2>
-          <div class="entry-card">
-            <button class="entry-item" @click="openAgentSidepanel">
-              <div class="entry-icon agent">
+                <!-- Agent icon -->
                 <svg
+                  v-if="entry.id === 'agent'"
                   viewBox="0 0 24 24"
                   width="20"
                   height="20"
@@ -195,49 +154,17 @@
                     d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
                   />
                 </svg>
-              </div>
-              <div class="entry-content">
-                <span class="entry-title">{{ getMessage('smartAssistantTitle') }}</span>
-                <span class="entry-desc">{{ getMessage('smartAssistantDesc') }}</span>
-              </div>
-              <svg
-                class="entry-arrow"
-                viewBox="0 0 24 24"
-                width="16"
-                height="16"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-            <button class="entry-item entry-item-coming-soon" @click="openWorkflowSidepanel">
-              <div class="entry-icon workflow">
-                <WorkflowIcon />
-              </div>
-              <div class="entry-content">
-                <span class="entry-title">
-                  {{ getMessage('workflowManagementTitle') }}
-                  <span class="coming-soon-badge">Coming Soon</span>
-                </span>
-                <span class="entry-desc">{{ getMessage('workflowManagementDesc') }}</span>
-              </div>
-              <svg
-                class="entry-arrow"
-                viewBox="0 0 24 24"
-                width="16"
-                height="16"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-            <button class="entry-item" @click="openElementMarkerSidepanel">
-              <div class="entry-icon marker">
+                <!-- Workflow icon -->
+                <WorkflowIcon v-else-if="entry.id === 'workflow'" />
+                <!-- Edit icon -->
+                <EditIcon v-else-if="entry.id === 'edit'" />
+                <!-- Marker icon -->
+                <MarkerIcon v-else-if="entry.id === 'marker'" />
+                <!-- Markers Library icon -->
+                <ClipboardListIcon v-else-if="entry.id === 'markers-library'" />
+                <!-- Settings icon -->
                 <svg
+                  v-else-if="entry.id === 'settings'"
                   viewBox="0 0 24 24"
                   width="20"
                   height="20"
@@ -248,29 +175,42 @@
                   <path
                     stroke-linecap="round"
                     stroke-linejoin="round"
-                    d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                  />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              </button>
+            </div>
+            <!-- Description panel (always visible) -->
+            <div class="management-desc-panel">
+              <div class="entry-icon" :class="activeEntryData.iconClass">
+                <!-- Agent icon -->
+                <svg
+                  v-if="activeEntryData.id === 'agent'"
+                  viewBox="0 0 24 24"
+                  width="20"
+                  height="20"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
                   />
                 </svg>
-              </div>
-              <div class="entry-content">
-                <span class="entry-title">{{ getMessage('elementMarkerManagementTitle') }}</span>
-                <span class="entry-desc">{{ getMessage('elementMarkerManagementDesc') }}</span>
-              </div>
-              <svg
-                class="entry-arrow"
-                viewBox="0 0 24 24"
-                width="16"
-                height="16"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-            <button class="entry-item" @click="configExpanded = !configExpanded">
-              <div class="entry-icon settings">
+                <!-- Workflow icon -->
+                <WorkflowIcon v-else-if="activeEntryData.id === 'workflow'" />
+                <!-- Edit icon -->
+                <EditIcon v-else-if="activeEntryData.id === 'edit'" />
+                <!-- Marker icon -->
+                <MarkerIcon v-else-if="activeEntryData.id === 'marker'" />
+                <!-- Markers Library icon -->
+                <ClipboardListIcon v-else-if="activeEntryData.id === 'markers-library'" />
+                <!-- Settings icon -->
                 <svg
+                  v-else-if="activeEntryData.id === 'settings'"
                   viewBox="0 0 24 24"
                   width="20"
                   height="20"
@@ -287,55 +227,15 @@
                 </svg>
               </div>
               <div class="entry-content">
-                <span class="entry-title">{{ getMessage('serverSettingsTitle') }}</span>
-                <span class="entry-desc">{{ getMessage('serverSettingsDesc') }}</span>
+                <span class="entry-title">
+                  {{ activeEntryData.title }}
+                  <span v-if="activeEntryData.comingSoon" class="coming-soon-badge"
+                    >Coming Soon</span
+                  >
+                </span>
+                <span class="entry-desc">{{ activeEntryData.desc }}</span>
               </div>
-              <svg
-                class="entry-arrow"
-                :class="{ 'entry-arrow-down': configExpanded }"
-                viewBox="0 0 24 24"
-                width="16"
-                height="16"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-            <button class="entry-item" @click="currentView = 'local-model'">
-              <div class="entry-icon model">
-                <svg
-                  viewBox="0 0 24 24"
-                  width="20"
-                  height="20"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                  />
-                </svg>
-              </div>
-              <div class="entry-content">
-                <span class="entry-title">{{ getMessage('localModelTitle') }}</span>
-                <span class="entry-desc">{{ getMessage('localModelDesc') }}</span>
-              </div>
-              <svg
-                class="entry-arrow"
-                viewBox="0 0 24 24"
-                width="16"
-                height="16"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
+            </div>
           </div>
         </div>
       </div>
@@ -459,7 +359,7 @@ import ModelCacheManagement from './components/ModelCacheManagement.vue';
 import LocalModelPage from './components/LocalModelPage.vue';
 import {
   DocumentIcon,
-  DatabaseIcon,
+  ClipboardListIcon,
   BoltIcon,
   TrashIcon,
   CheckIcon,
@@ -644,6 +544,77 @@ const isServiceRunning = computed(() => {
 
 // Config section expanded state (collapsed by default)
 const configExpanded = ref(false);
+
+// Management entries hover state
+const hoveredEntry = ref<string>('agent');
+
+// Management entries data
+const managementEntries = computed(() => [
+  {
+    id: 'agent',
+    title: getMessage('smartAssistantTitle'),
+    desc: getMessage('smartAssistantDesc'),
+    iconClass: 'agent',
+    btnClass: 'rr-icon-btn-agent',
+    action: () => openAgentSidepanel(),
+    comingSoon: false,
+  },
+  {
+    id: 'workflow',
+    title: getMessage('workflowManagementTitle'),
+    desc: getMessage('workflowManagementDesc'),
+    iconClass: 'workflow',
+    btnClass: 'rr-icon-btn-workflow',
+    action: () => openWorkflowSidepanel(),
+    comingSoon: true,
+  },
+  {
+    id: 'edit',
+    title: getMessage('webEditorTooltip'),
+    desc: getMessage('webEditorDesc'),
+    iconClass: 'edit',
+    btnClass: 'rr-icon-btn-edit',
+    action: () => toggleWebEditor(),
+    comingSoon: false,
+  },
+  {
+    id: 'marker',
+    title: getMessage('elementMarkerManagementTitle'),
+    desc: getMessage('elementMarkerManagementDesc'),
+    iconClass: 'marker',
+    btnClass: 'rr-icon-btn-marker',
+    action: () => toggleElementMarker(),
+    comingSoon: false,
+  },
+  {
+    id: 'markers-library',
+    title: getMessage('elementMarkerSidepanelTitle'),
+    desc: getMessage('elementMarkerSidepanelDesc'),
+    iconClass: 'markers-library',
+    btnClass: 'rr-icon-btn-markers-library',
+    action: () => openElementMarkerSidepanel(),
+    comingSoon: false,
+  },
+  {
+    id: 'settings',
+    title: getMessage('serverSettingsTitle'),
+    desc: getMessage('serverSettingsDesc'),
+    iconClass: 'settings',
+    btnClass: 'rr-icon-btn-settings',
+    action: () => (configExpanded.value = !configExpanded.value),
+    comingSoon: false,
+  },
+]);
+
+// Active entry id
+const activeEntryId = computed(() => hoveredEntry.value);
+
+// Get data for active entry
+const activeEntryData = computed(() => {
+  return (
+    managementEntries.value.find((e) => e.id === activeEntryId.value) || managementEntries.value[0]
+  );
+});
 
 const copyButtonText = ref(getMessage('copyConfigButton'));
 
@@ -2583,9 +2554,8 @@ onUnmounted(() => {
   transition: all var(--ac-motion-fast, 120ms) ease;
 }
 
-.rr-icon-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: var(--ac-shadow-float, 0 4px 20px -2px rgba(0, 0, 0, 0.05));
+.rr-icon-btn-active:not(:disabled) {
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
 }
 
 .rr-icon-btn:disabled {
@@ -2657,6 +2627,17 @@ onUnmounted(() => {
   color: #059669;
 }
 
+/* Markers Library button - teal */
+.rr-icon-btn-markers-library {
+  background: rgba(20, 184, 166, 0.1);
+  color: #14b8a6;
+}
+
+.rr-icon-btn-markers-library:hover:not(:disabled) {
+  background: rgba(20, 184, 166, 0.2);
+  color: #0d9488;
+}
+
 /* 设置按钮 - 灰色/橙色 */
 .rr-icon-btn-settings {
   background: rgba(107, 114, 128, 0.1);
@@ -2675,6 +2656,39 @@ onUnmounted(() => {
 
 .rr-icon-btn-settings.active:hover:not(:disabled) {
   background: rgba(217, 119, 87, 0.25);
+}
+
+/* Agent button - orange (accent color) */
+.rr-icon-btn-agent {
+  background: rgba(217, 119, 87, 0.1);
+  color: var(--ac-accent, #d97757);
+}
+
+.rr-icon-btn-agent:hover:not(:disabled) {
+  background: rgba(217, 119, 87, 0.2);
+  color: #c96a4a;
+}
+
+/* Workflow button - blue */
+.rr-icon-btn-workflow {
+  background: rgba(37, 99, 235, 0.1);
+  color: #2563eb;
+}
+
+.rr-icon-btn-workflow:hover:not(:disabled) {
+  background: rgba(37, 99, 235, 0.2);
+  color: #1d4ed8;
+}
+
+/* Model button - purple */
+.rr-icon-btn-model {
+  background: rgba(139, 92, 246, 0.1);
+  color: #8b5cf6;
+}
+
+.rr-icon-btn-model:hover:not(:disabled) {
+  background: rgba(139, 92, 246, 0.2);
+  color: #7c3aed;
 }
 
 /* Coming Soon 按钮样式 */
@@ -2797,19 +2811,24 @@ onUnmounted(() => {
   color: #2563eb;
 }
 
+.entry-icon.edit {
+  background: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
+}
+
 .entry-icon.marker {
   background: rgba(16, 185, 129, 0.12);
   color: #10b981;
 }
 
+.entry-icon.markers-library {
+  background: rgba(20, 184, 166, 0.12);
+  color: #14b8a6;
+}
+
 .entry-icon.settings {
   background: rgba(107, 114, 128, 0.12);
   color: #6b7280;
-}
-
-.entry-icon.model {
-  background: rgba(139, 92, 246, 0.12);
-  color: #8b5cf6;
 }
 
 .entry-content {
@@ -2865,6 +2884,22 @@ onUnmounted(() => {
 
 .entry-item-coming-soon:hover {
   opacity: 0.85;
+}
+
+/* Management buttons row - remove bottom radius when desc panel is shown */
+.management-buttons-row:has(+ .management-desc-panel) {
+  border-radius: var(--ac-radius-card, 12px) var(--ac-radius-card, 12px) 0 0;
+}
+
+/* Management Card Description Panel */
+.management-desc-panel {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--ac-surface, white);
+  border-radius: 0 0 var(--ac-radius-card, 12px) var(--ac-radius-card, 12px);
+  box-shadow: var(--ac-shadow-card, 0 1px 3px rgba(0, 0, 0, 0.08));
 }
 
 /* Coming Soon Toast */

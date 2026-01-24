@@ -11,3 +11,4 @@ export { default as WorkflowIcon } from './WorkflowIcon.vue';
 export { default as RefreshIcon } from './RefreshIcon.vue';
 export { default as EditIcon } from './EditIcon.vue';
 export { default as MarkerIcon } from './MarkerIcon.vue';
+export { default as ClipboardListIcon } from './ClipboardListIcon.vue';

@@ -740,6 +740,10 @@
     "message": "Enable page edit mode",
     "description": "Web editor button tooltip"
   },
+  "webEditorDesc": {
+    "message": "Visually edit any webpage in real-time",
+    "description": "Web editor management entry description"
+  },
   "elementMarkerTooltip": {
     "message": "Enable element marking",
     "description": "Element marker button tooltip"
@@ -747,6 +751,10 @@
   "managementEntriesLabel": {
     "message": "Management",
     "description": "Management entries section label"
+  },
+  "toolsLabel": {
+    "message": "Tools",
+    "description": "Tools section label"
   },
   "smartAssistantTitle": {
     "message": "AI Assistant",
@@ -769,8 +777,16 @@
     "description": "Element marker management entry title"
   },
   "elementMarkerManagementDesc": {
-    "message": "Manage page element markers",
+    "message": "Mark elements on the current page",
     "description": "Element marker management entry description"
+  },
+  "elementMarkerSidepanelTitle": {
+    "message": "Markers Library",
+    "description": "Element marker sidepanel entry title"
+  },
+  "elementMarkerSidepanelDesc": {
+    "message": "View and manage saved element markers",
+    "description": "Element marker sidepanel entry description"
   },
   "serverSettingsTitle": {
     "message": "Server Settings",
