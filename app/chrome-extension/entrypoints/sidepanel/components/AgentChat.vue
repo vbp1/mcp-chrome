@@ -479,6 +479,11 @@ async function loadSessionHistory(sessionId: string): Promise<void> {
       if (!isStillValid()) return;
 
       const messages = data.messages || [];
+
+      // Load element references from history before setting messages
+      // This ensures @Element_N numbering continues correctly and deduplication works
+      elementRefs.loadFromHistory(messages);
+
       const converted = convertStoredMessages(messages);
       chat.setMessages(converted);
     } else {

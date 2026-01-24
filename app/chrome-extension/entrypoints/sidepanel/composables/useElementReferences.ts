@@ -47,9 +47,37 @@ export function useElementReferences() {
   const references = ref<Map<number, ElementReferenceData>>(new Map());
 
   /**
-   * Add a new element reference and return the @Element_N string
+   * Find existing reference by identity criteria (selector + selectorType + pageUrl).
+   * Returns the element number if found, undefined otherwise.
+   */
+  function findExistingReference(data: ElementReferenceData): number | undefined {
+    for (const [num, ref] of references.value.entries()) {
+      if (
+        ref.selector === data.selector &&
+        ref.selectorType === data.selectorType &&
+        ref.pageUrl === data.pageUrl
+      ) {
+        return num;
+      }
+    }
+    return undefined;
+  }
+
+  /**
+   * Add a new element reference and return the @Element_N string.
+   * If an identical element already exists (same selector, selectorType, pageUrl),
+   * returns the existing reference instead of creating a new one.
    */
   function addReference(data: ElementReferenceData): string {
+    // Check for existing identical element
+    const existingNum = findExistingReference(data);
+    if (existingNum !== undefined) {
+      // Update fullText/summary in case element content changed
+      references.value.set(existingNum, data);
+      return `@Element_${existingNum}`;
+    }
+
+    // Create new reference
     counter.value += 1;
     const num = counter.value;
     references.value.set(num, data);
@@ -145,6 +173,42 @@ export function useElementReferences() {
   }
 
   /**
+   * Load element references from chat history messages.
+   * Call this after loading session history to restore element references.
+   * Updates counter to continue numbering from the highest existing reference.
+   *
+   * @param messages - Array of messages with optional metadata.elementReferences
+   */
+  function loadFromHistory(
+    messages: Array<{ metadata?: { elementReferences?: Record<string, ElementReferenceData> } }>,
+  ): void {
+    let maxNum = 0;
+
+    for (const message of messages) {
+      const elementRefs = message.metadata?.elementReferences;
+      if (!elementRefs) continue;
+
+      for (const [numStr, refData] of Object.entries(elementRefs)) {
+        const num = parseInt(numStr, 10);
+        if (isNaN(num)) continue;
+
+        // Only add if not already present (earlier messages take precedence)
+        if (!references.value.has(num)) {
+          references.value.set(num, refData);
+        }
+
+        // Track highest number for counter
+        if (num > maxNum) {
+          maxNum = num;
+        }
+      }
+    }
+
+    // Set counter to continue from highest number
+    counter.value = maxNum;
+  }
+
+  /**
    * Remove references that are no longer in the text
    * Call this after text changes to keep the map clean
    */
@@ -186,6 +250,7 @@ export function useElementReferences() {
     allReferences,
 
     // Methods
+    findExistingReference,
     addReference,
     getReference,
     hasReference,
@@ -196,6 +261,7 @@ export function useElementReferences() {
     pruneUnusedReferences,
     extractReferencesForText,
     reset,
+    loadFromHistory,
   };
 }
 
