@@ -227,6 +227,34 @@ export function initElementMarkerListeners() {
           })();
           return true;
         }
+        case BACKGROUND_MESSAGE_TYPES.ELEMENT_MARKER_OPEN_LIBRARY: {
+          (async () => {
+            try {
+              // Store request to open element-markers tab
+              await chrome.storage.local.set({
+                'element-marker-open-library': {
+                  timestamp: Date.now(),
+                },
+              });
+
+              // Get current window to open side panel in
+              const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+              const tab = tabs[0];
+              if (!tab?.windowId) {
+                sendResponse({ success: false, error: 'no active window' });
+                return;
+              }
+
+              // Open side panel
+              await chrome.sidePanel.open({ windowId: tab.windowId });
+
+              sendResponse({ success: true });
+            } catch (e) {
+              sendResponse({ success: false, error: (e as any)?.message || String(e) });
+            }
+          })();
+          return true;
+        }
         case BACKGROUND_MESSAGE_TYPES.ELEMENT_MARKER_VALIDATE: {
           // Validate via MCP tool chain
           (async () => {

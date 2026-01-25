@@ -2503,6 +2503,11 @@
         },
       });
 
+      // Open Element Library in sidepanel
+      await chrome.runtime.sendMessage({
+        type: 'element_marker_open_library',
+      });
+
       // Show success feedback on button
       if (saveBtn) {
         const originalText = saveBtn.textContent;

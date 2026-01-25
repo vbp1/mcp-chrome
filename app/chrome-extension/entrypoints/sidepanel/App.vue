@@ -862,6 +862,34 @@ watch(markerSearch, (query) => {
   expandedDomains.value = domainsToExpand;
 });
 
+/**
+ * Check for pending "open library" request and switch to element-markers tab.
+ */
+async function checkAndOpenLibrary(): Promise<void> {
+  try {
+    const stored = await chrome.storage.local.get('element-marker-open-library');
+    const pending = stored['element-marker-open-library'];
+
+    if (!pending) return;
+
+    // Check if this is recent (within last 5 seconds)
+    const age = Date.now() - (pending.timestamp || 0);
+    if (age > 5000) {
+      await chrome.storage.local.remove('element-marker-open-library');
+      return;
+    }
+
+    // Clear the pending data immediately
+    await chrome.storage.local.remove('element-marker-open-library');
+
+    // Switch to element-markers tab
+    activeTab.value = 'element-markers';
+    await loadMarkers();
+  } catch (e) {
+    console.error('[App] checkAndOpenLibrary error:', e);
+  }
+}
+
 onMounted(async () => {
   // Initialize theme
   await initTheme();
@@ -871,20 +899,30 @@ onMounted(async () => {
     currentUrl.value = String(tab?.url || '');
   } catch {}
 
-  // Check URL params for initial tab
-  const params = new URLSearchParams(window.location.search);
-  const tabParam = params.get('tab');
-  if (tabParam === 'element-markers') {
-    activeTab.value = 'element-markers';
-    await loadMarkers();
-  } else if (tabParam === 'agent-chat') {
-    activeTab.value = 'agent-chat';
-  } else if (tabParam === 'workflows') {
-    activeTab.value = 'workflows';
+  // Check for pending "open library" request first
+  await checkAndOpenLibrary();
+
+  // Check URL params for initial tab (only if not already set by checkAndOpenLibrary)
+  if (activeTab.value === 'agent-chat') {
+    const params = new URLSearchParams(window.location.search);
+    const tabParam = params.get('tab');
+    if (tabParam === 'element-markers') {
+      activeTab.value = 'element-markers';
+      await loadMarkers();
+    } else if (tabParam === 'workflows') {
+      activeTab.value = 'workflows';
+    }
   }
 
   // V3 workflows data is auto-refreshed by useWorkflowsV3 composable
   // No need to manually call refresh here
+});
+
+// Listen for "open library" requests while sidepanel is already open
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === 'local' && changes['element-marker-open-library']?.newValue) {
+    checkAndOpenLibrary();
+  }
 });
 
 // Listen for marker changes from background (e.g., when added via Element Marker inject script)
