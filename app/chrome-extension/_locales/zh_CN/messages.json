@@ -646,6 +646,7 @@
     "placeholders": { "count": { "content": "$1", "example": "5" } }
   },
   "emVerifyTitle": { "message": "验证", "description": "验证标注按钮标题" },
+  "emSendToChatTitle": { "message": "发送到聊天", "description": "发送标注到聊天按钮标题" },
   "emEditTitle": { "message": "编辑", "description": "编辑标注按钮标题" },
   "emDeleteTitle": { "message": "删除", "description": "删除标注按钮标题" },
   "emNoMatchingMarkers": { "message": "未找到匹配的标注", "description": "无搜索结果提示" },

@@ -703,6 +703,10 @@
     "placeholders": { "count": { "content": "$1", "example": "5" } }
   },
   "emVerifyTitle": { "message": "Verify", "description": "Verify marker button title" },
+  "emSendToChatTitle": {
+    "message": "Send to Chat",
+    "description": "Send marker to chat button title"
+  },
   "emEditTitle": { "message": "Edit", "description": "Edit marker button title" },
   "emDeleteTitle": { "message": "Delete", "description": "Delete marker button title" },
   "emNoMatchingMarkers": {

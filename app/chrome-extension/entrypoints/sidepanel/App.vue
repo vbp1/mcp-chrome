@@ -239,6 +239,19 @@
                             </svg>
                           </button>
                           <button
+                            class="em-action-btn em-action-chat"
+                            @click="sendMarkerToChat(marker)"
+                            :title="getMessage('emSendToChatTitle')"
+                          >
+                            <svg viewBox="0 0 24 24" width="14" height="14">
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                              />
+                            </svg>
+                          </button>
+                          <button
                             class="em-action-btn em-action-edit"
                             @click="editMarker(marker)"
                             :title="getMessage('emEditTitle')"
@@ -710,6 +723,84 @@ async function highlightInTab(marker: ElementMarker) {
   } catch (e) {
     // Ignore errors (tab might not support content scripts)
     console.error('Failed to highlight in tab:', e);
+  }
+}
+
+/**
+ * Check if current tab URL matches the marker's original URL.
+ * Uses exact matching (origin + path) to ensure the element will be found.
+ */
+function isCurrentTabMatchingMarkerUrl(currentUrl: string, marker: ElementMarker): boolean {
+  try {
+    const current = new URL(currentUrl);
+    const markerParsed = new URL(marker.url);
+
+    // Exact match: origin and pathname must be the same
+    return current.origin === markerParsed.origin && current.pathname === markerParsed.pathname;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Send marker to chat as @Element_N reference.
+ * If the marker's page is not currently open, opens it in a new tab first.
+ * Stores element info in storage and switches to agent-chat tab.
+ */
+async function sendMarkerToChat(marker: ElementMarker) {
+  try {
+    // Get current active tab
+    const [currentTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const currentTabUrl = currentTab?.url || '';
+
+    // Check if current tab matches the marker's URL (exact match)
+    const isMatching = isCurrentTabMatchingMarkerUrl(currentTabUrl, marker);
+
+    if (!isMatching && marker.url) {
+      // Open marker's page in a new tab and wait for it to load
+      const newTab = await chrome.tabs.create({ url: marker.url, active: true });
+
+      // Wait for the tab to finish loading
+      await new Promise<void>((resolve) => {
+        const listener = (tabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
+          if (tabId === newTab.id && changeInfo.status === 'complete') {
+            chrome.tabs.onUpdated.removeListener(listener);
+            resolve();
+          }
+        };
+        chrome.tabs.onUpdated.addListener(listener);
+
+        // Timeout after 10 seconds
+        setTimeout(() => {
+          chrome.tabs.onUpdated.removeListener(listener);
+          resolve();
+        }, 10000);
+      });
+    }
+
+    // Create element info compatible with AgentChat's checkAndInsertPendingElement
+    const elementInfo = {
+      selector: marker.selector,
+      selectorType: marker.selectorType || 'css',
+      tagName: '', // Will show as 'unknown' in chat
+      id: null,
+      classes: [],
+      text: marker.name, // Use marker name as text hint
+      pageUrl: marker.url,
+    };
+
+    // Store in local storage for AgentChat to pick up
+    await chrome.storage.local.set({
+      'element-marker-send-to-chat': {
+        elementInfo,
+        timestamp: Date.now(),
+      },
+    });
+
+    // Switch to agent-chat tab
+    handleTabChange('agent-chat');
+  } catch (e) {
+    console.error('Failed to send marker to chat:', e);
   }
 }
 
@@ -1318,6 +1409,15 @@ onUnmounted(() => {
 
 .em-action-btn.em-action-verify:hover {
   background: var(--ac-accent-subtle, rgba(217, 119, 87, 0.18));
+}
+
+.em-action-btn.em-action-chat {
+  background: var(--ac-info-subtle, rgba(59, 130, 246, 0.1));
+  color: var(--ac-info, #3b82f6);
+}
+
+.em-action-btn.em-action-chat:hover {
+  background: var(--ac-info-subtle, rgba(59, 130, 246, 0.18));
 }
 
 .em-action-btn.em-action-edit {
