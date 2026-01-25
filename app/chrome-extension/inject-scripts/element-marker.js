@@ -2476,6 +2476,8 @@
   }
 
   async function save() {
+    const saveBtn = STATE.box?.querySelector('#__em_save');
+
     try {
       const name = STATE.box?.querySelector('#__em_name')?.value?.trim();
       const selector = STATE.box?.querySelector('#__em_selector')?.textContent?.trim();
@@ -2500,9 +2502,29 @@
           listMode,
         },
       });
-    } catch {}
 
-    stop();
+      // Show success feedback on button
+      if (saveBtn) {
+        const originalText = saveBtn.textContent;
+        saveBtn.textContent = 'Saved!';
+        saveBtn.style.background = 'var(--em-success, #22c55e)';
+        setTimeout(() => {
+          saveBtn.textContent = originalText;
+          saveBtn.style.background = '';
+        }, 1500);
+      }
+    } catch {
+      // Show error feedback on button
+      if (saveBtn) {
+        const originalText = saveBtn.textContent;
+        saveBtn.textContent = 'Error';
+        saveBtn.style.background = 'var(--em-danger, #ef4444)';
+        setTimeout(() => {
+          saveBtn.textContent = originalText;
+          saveBtn.style.background = '';
+        }, 1500);
+      }
+    }
   }
 
   // ============================================================================
