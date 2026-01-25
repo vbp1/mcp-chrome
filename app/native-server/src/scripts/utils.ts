@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { execSync } from 'child_process';
+import { execSync, spawnSync } from 'child_process';
 import { promisify } from 'util';
 import { COMMAND_NAME, DESCRIPTION, EXTENSION_ID, HOST_NAME } from './constant';
 import { BrowserType, getBrowserConfig, detectInstalledBrowsers } from './browser-config';
@@ -531,5 +531,108 @@ export async function registerWithElevatedPermissions(): Promise<void> {
   } catch (error: any) {
     console.error(colorText(`注册失败: ${error.message}`, 'red'));
     throw error;
+  }
+}
+
+/**
+ * Find the better-sqlite3 package directory
+ */
+function findBetterSqlite3Dir(): string | null {
+  // Try to find better-sqlite3 in node_modules
+  const possiblePaths = [
+    // pnpm structure
+    path.join(__dirname, '..', '..', '..', 'better-sqlite3'),
+    path.join(__dirname, '..', '..', 'node_modules', 'better-sqlite3'),
+    // npm/yarn structure
+    path.join(__dirname, '..', '..', '..', '..', 'better-sqlite3'),
+    path.join(__dirname, '..', '..', '..', '..', 'node_modules', 'better-sqlite3'),
+  ];
+
+  // Also try to resolve from require
+  try {
+    const betterSqlitePath = require.resolve('better-sqlite3');
+    const betterSqliteDir = path.dirname(betterSqlitePath);
+    possiblePaths.unshift(betterSqliteDir);
+  } catch {
+    // ignore
+  }
+
+  for (const p of possiblePaths) {
+    const bindingGyp = path.join(p, 'binding.gyp');
+    if (fs.existsSync(bindingGyp)) {
+      return p;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Check if better-sqlite3 native binding exists
+ */
+function betterSqlite3BindingExists(packageDir: string): boolean {
+  const bindingPaths = [
+    path.join(packageDir, 'build', 'Release', 'better_sqlite3.node'),
+    path.join(packageDir, 'build', 'Debug', 'better_sqlite3.node'),
+    path.join(packageDir, 'prebuilds', `${os.platform()}-${os.arch()}`, 'better_sqlite3.node'),
+  ];
+
+  return bindingPaths.some((p) => fs.existsSync(p));
+}
+
+/**
+ * Rebuild better-sqlite3 native module if binding is missing.
+ * This is needed when Node.js version changes or when prebuilt binaries are not available.
+ */
+export async function ensureBetterSqlite3(): Promise<void> {
+  console.log(colorText('Checking better-sqlite3 native binding...', 'blue'));
+
+  const packageDir = findBetterSqlite3Dir();
+  if (!packageDir) {
+    console.log(colorText('⚠️ better-sqlite3 package not found, skipping rebuild', 'yellow'));
+    return;
+  }
+
+  if (betterSqlite3BindingExists(packageDir)) {
+    console.log(colorText('✓ better-sqlite3 native binding exists', 'green'));
+    return;
+  }
+
+  console.log(colorText('Native binding not found, rebuilding better-sqlite3...', 'yellow'));
+
+  try {
+    // Clean old build directory if it exists (to avoid symlink conflicts)
+    const buildDir = path.join(packageDir, 'build');
+    if (fs.existsSync(buildDir)) {
+      fs.rmSync(buildDir, { recursive: true, force: true });
+    }
+
+    // Run npm run build-release in the better-sqlite3 directory
+    const result = spawnSync('npm', ['run', 'build-release'], {
+      cwd: packageDir,
+      stdio: 'inherit',
+      shell: true,
+      timeout: 180000, // 3 minutes timeout
+    });
+
+    if (result.status === 0) {
+      console.log(colorText('✓ better-sqlite3 rebuilt successfully', 'green'));
+    } else {
+      console.log(
+        colorText(
+          `⚠️ better-sqlite3 rebuild failed with status ${result.status}. Chat functionality may not work.`,
+          'yellow',
+        ),
+      );
+      console.log(
+        colorText('   You can try rebuilding manually: npm rebuild better-sqlite3', 'yellow'),
+      );
+    }
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.log(colorText(`⚠️ better-sqlite3 rebuild error: ${message}`, 'yellow'));
+    console.log(
+      colorText('   You can try rebuilding manually: npm rebuild better-sqlite3', 'yellow'),
+    );
   }
 }
