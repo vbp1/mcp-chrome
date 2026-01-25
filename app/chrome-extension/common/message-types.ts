@@ -59,6 +59,7 @@ export const BACKGROUND_MESSAGE_TYPES = {
   ELEMENT_MARKER_VALIDATE: 'element_marker_validate',
   ELEMENT_MARKER_START: 'element_marker_start_from_popup',
   ELEMENT_MARKER_SEND_TO_CHAT: 'element_marker_send_to_chat',
+  ELEMENT_MARKER_CHANGED: 'element_marker_changed',
   // Element picker (human-in-the-loop element selection)
   ELEMENT_PICKER_UI_EVENT: 'element_picker_ui_event',
   ELEMENT_PICKER_FRAME_EVENT: 'element_picker_frame_event',

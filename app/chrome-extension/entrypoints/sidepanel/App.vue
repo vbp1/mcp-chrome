@@ -885,18 +885,21 @@ onMounted(async () => {
 
   // V3 workflows data is auto-refreshed by useWorkflowsV3 composable
   // No need to manually call refresh here
-
-  // V2 push-based refresh is no longer needed - V3 uses event subscription
-  // Keeping commented for reference:
-  // const onMessage = (message: { type?: string }) => {
-  //   if (message?.type === BACKGROUND_MESSAGE_TYPES.RR_FLOWS_CHANGED) refresh();
-  // };
-  // chrome.runtime.onMessage.addListener(onMessage);
 });
 
+// Listen for marker changes from background (e.g., when added via Element Marker inject script)
+const onMarkerChanged = (message: { type?: string }) => {
+  if (message?.type === BACKGROUND_MESSAGE_TYPES.ELEMENT_MARKER_CHANGED) {
+    // Reload markers if we're on the element-markers tab
+    if (activeTab.value === 'element-markers') {
+      loadMarkers();
+    }
+  }
+};
+chrome.runtime.onMessage.addListener(onMarkerChanged);
+
 onUnmounted(() => {
-  // V3 workflows cleanup is handled by useWorkflowsV3 composable
-  // No additional cleanup needed
+  chrome.runtime.onMessage.removeListener(onMarkerChanged);
 });
 </script>
 

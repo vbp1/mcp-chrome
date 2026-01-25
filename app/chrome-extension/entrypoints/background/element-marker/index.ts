@@ -141,14 +141,34 @@ export function initElementMarkerListeners() {
         case BACKGROUND_MESSAGE_TYPES.ELEMENT_MARKER_SAVE: {
           const req = message.marker as UpsertMarkerRequest;
           saveMarker(req)
-            .then((marker) => sendResponse({ success: true, marker }))
+            .then((marker) => {
+              sendResponse({ success: true, marker });
+              // Notify sidepanel about the change
+              chrome.runtime
+                .sendMessage({
+                  type: BACKGROUND_MESSAGE_TYPES.ELEMENT_MARKER_CHANGED,
+                })
+                .catch(() => {
+                  /* ignore if no listener */
+                });
+            })
             .catch((e) => sendResponse({ success: false, error: e?.message || String(e) }));
           return true;
         }
         case BACKGROUND_MESSAGE_TYPES.ELEMENT_MARKER_UPDATE: {
           const marker = message.marker as ElementMarker;
           updateMarker(marker)
-            .then(() => sendResponse({ success: true }))
+            .then(() => {
+              sendResponse({ success: true });
+              // Notify sidepanel about the change
+              chrome.runtime
+                .sendMessage({
+                  type: BACKGROUND_MESSAGE_TYPES.ELEMENT_MARKER_CHANGED,
+                })
+                .catch(() => {
+                  /* ignore if no listener */
+                });
+            })
             .catch((e) => sendResponse({ success: false, error: e?.message || String(e) }));
           return true;
         }
@@ -159,7 +179,17 @@ export function initElementMarkerListeners() {
             return true;
           }
           deleteMarker(id)
-            .then(() => sendResponse({ success: true }))
+            .then(() => {
+              sendResponse({ success: true });
+              // Notify sidepanel about the change
+              chrome.runtime
+                .sendMessage({
+                  type: BACKGROUND_MESSAGE_TYPES.ELEMENT_MARKER_CHANGED,
+                })
+                .catch(() => {
+                  /* ignore if no listener */
+                });
+            })
             .catch((e) => sendResponse({ success: false, error: e?.message || String(e) }));
           return true;
         }
