@@ -624,14 +624,241 @@
       .em-drag-handle:active {
         cursor: grabbing;
       }
+
+      /* Compact Panel */
+      .em-compact-panel {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: #ffffff;
+        border-radius: 10px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        padding: 6px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      }
+
+      .em-compact-panel .em-compact-drag {
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: grab;
+        color: #a3a3a3;
+        flex-shrink: 0;
+      }
+
+      .em-compact-panel .em-compact-drag:active {
+        cursor: grabbing;
+      }
+
+      .em-compact-panel .em-compact-drag svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      .em-compact-btn {
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 150ms ease;
+        padding: 0;
+        position: relative;
+      }
+
+      .em-compact-btn svg {
+        width: 18px;
+        height: 18px;
+        stroke-width: 2;
+      }
+
+      .em-compact-btn-verify {
+        background: rgba(37, 99, 235, 0.1);
+        color: #2563eb;
+      }
+
+      .em-compact-btn-verify:hover {
+        background: rgba(37, 99, 235, 0.2);
+      }
+
+      .em-compact-btn-save {
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+      }
+
+      .em-compact-btn-save:hover {
+        background: rgba(16, 185, 129, 0.2);
+      }
+
+      .em-compact-btn-chat {
+        background: rgba(139, 92, 246, 0.1);
+        color: #8b5cf6;
+      }
+
+      .em-compact-btn-chat:hover {
+        background: rgba(139, 92, 246, 0.2);
+      }
+
+      .em-compact-btn-expand {
+        background: #f5f5f5;
+        color: #525252;
+      }
+
+      .em-compact-btn-expand:hover {
+        background: #e5e5e5;
+      }
+
+      .em-compact-btn-close {
+        background: transparent;
+        color: #a3a3a3;
+      }
+
+      .em-compact-btn-close:hover {
+        background: #f5f5f5;
+        color: #525252;
+      }
+
+      /* Tooltip */
+      .em-compact-btn::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: calc(100% + 6px);
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 6px 10px;
+        background: #262626;
+        color: #ffffff;
+        font-size: 12px;
+        font-weight: 500;
+        border-radius: 6px;
+        white-space: nowrap;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 150ms ease, visibility 150ms ease;
+        pointer-events: none;
+        z-index: 10;
+      }
+
+      .em-compact-btn::before {
+        content: '';
+        position: absolute;
+        bottom: calc(100% + 2px);
+        left: 50%;
+        transform: translateX(-50%);
+        border: 4px solid transparent;
+        border-top-color: #262626;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 150ms ease, visibility 150ms ease;
+        pointer-events: none;
+        z-index: 10;
+      }
+
+      .em-compact-btn:hover::after,
+      .em-compact-btn:hover::before {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      /* Compact panel selector display */
+      .em-compact-selector {
+        max-width: 200px;
+        font-size: 12px;
+        color: #737373;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        padding: 0 8px;
+        user-select: text;
+      }
+
+      /* Full panel collapse button */
+      .em-collapse-btn {
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        background: transparent;
+        color: #a3a3a3;
+        cursor: pointer;
+        transition: color 150ms ease;
+        padding: 0;
+      }
+
+      .em-collapse-btn:hover {
+        color: #525252;
+      }
+
+      .em-collapse-btn svg {
+        width: 20px;
+        height: 20px;
+        stroke-width: 2;
+      }
+
+      /* Hidden states */
+      .em-panel.em-hidden {
+        display: none;
+      }
+
+      .em-compact-panel.em-hidden {
+        display: none;
+      }
     `;
 
     const PANEL_TEMPLATE = `
-      <div class="em-panel" id="em_panel_root">
+      <!-- Compact Panel (default) -->
+      <div class="em-compact-panel" id="__em_compact_panel">
+        <div class="em-compact-drag" id="__em_compact_drag" title="Drag to move">
+          <svg viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 8h16M4 16h16"/>
+          </svg>
+        </div>
+        <span class="em-compact-selector" id="__em_compact_selector">No element</span>
+        <button class="em-compact-btn em-compact-btn-verify" id="__em_compact_verify" data-tooltip="Verify">
+          <svg viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+          </svg>
+        </button>
+        <button class="em-compact-btn em-compact-btn-save" id="__em_compact_save" data-tooltip="Save">
+          <svg viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"/>
+          </svg>
+        </button>
+        <button class="em-compact-btn em-compact-btn-chat" id="__em_compact_chat" data-tooltip="Send to Chat">
+          <svg viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+          </svg>
+        </button>
+        <button class="em-compact-btn em-compact-btn-expand" id="__em_compact_expand" data-tooltip="Expand">
+          <svg viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+          </svg>
+        </button>
+        <button class="em-compact-btn em-compact-btn-close" id="__em_compact_close" data-tooltip="Close">
+          <svg viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Full Panel (expandable) -->
+      <div class="em-panel em-hidden" id="em_panel_root">
         <!-- Header -->
         <div class="em-header em-drag-handle" id="__em_drag_handle" title="Drag to move">
           <h2 class="em-title">Element Marker</h2>
           <div class="em-header-actions">
+            <button class="em-collapse-btn" id="__em_collapse" title="Collapse to toolbar">
+              <svg viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M20 12H4m0 0l6-6m-6 6l6 6"/>
+              </svg>
+            </button>
             <button class="em-icon-btn" id="__em_close" title="Close">
               <svg viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
@@ -879,6 +1106,11 @@
         panel.style.pointerEvents = 'auto';
       }
 
+      const compactPanel = shadowRoot.querySelector('.em-compact-panel');
+      if (compactPanel) {
+        compactPanel.style.pointerEvents = 'auto';
+      }
+
       document.documentElement.appendChild(hostElement);
       return { host: hostElement, shadow: shadowRoot };
     }
@@ -917,6 +1149,7 @@
       listMode: CONFIG.DEFAULTS.LIST_MODE,
       prefs: { ...CONFIG.DEFAULTS.PREFS },
       activeTab: 'attributes',
+      compactMode: true, // Start in compact mode by default
       validation: {
         status: 'idle',
         message: '',
@@ -957,6 +1190,9 @@
       }
       if (changed.validationHistory) {
         updateValidationHistoryUI();
+      }
+      if (changed.compactMode) {
+        updateCompactModeUI();
       }
 
       notifyListeners();
@@ -1053,6 +1289,22 @@
           </div>`;
         })
         .join('');
+    }
+
+    function updateCompactModeUI() {
+      const shadow = PanelHost.getShadow();
+      if (!shadow) return;
+
+      const compactPanel = shadow.getElementById('__em_compact_panel');
+      const fullPanel = shadow.getElementById('em_panel_root');
+
+      if (state.compactMode) {
+        compactPanel?.classList.remove('em-hidden');
+        fullPanel?.classList.add('em-hidden');
+      } else {
+        compactPanel?.classList.add('em-hidden');
+        fullPanel?.classList.remove('em-hidden');
+      }
     }
 
     return {
@@ -2089,9 +2341,11 @@
     const selectorText = STATE.box?.querySelector('#__em_selector');
     const inputName = STATE.box?.querySelector('#__em_name');
     const selectorDisplay = STATE.box?.querySelector('#__em_selector_text');
+    const compactSelector = STATE.box?.querySelector('#__em_compact_selector');
 
     if (selectorText) selectorText.textContent = sel;
     if (selectorDisplay) selectorDisplay.textContent = sel;
+    if (compactSelector) compactSelector.textContent = name || sel;
     if (inputName) inputName.value = name;
 
     moveHighlighterTo(el);
@@ -2590,12 +2844,32 @@
   }
 
   // ============================================================================
+  // Panel Mode Toggle (Compact / Expanded)
+  // ============================================================================
+
+  function togglePanelMode(compact) {
+    StateStore.set({ compactMode: compact });
+  }
+
+  // ============================================================================
   // Controls Binding
   // ============================================================================
 
   function bindControls() {
     const host = STATE.box;
     if (!host) return;
+
+    // Compact panel buttons
+    host.querySelector('#__em_compact_close')?.addEventListener('click', stop);
+    host.querySelector('#__em_compact_verify')?.addEventListener('click', verifyHighlightOnly);
+    host.querySelector('#__em_compact_save')?.addEventListener('click', save);
+    host.querySelector('#__em_compact_chat')?.addEventListener('click', sendToChat);
+    host
+      .querySelector('#__em_compact_expand')
+      ?.addEventListener('click', () => togglePanelMode(false));
+
+    // Full panel collapse button
+    host.querySelector('#__em_collapse')?.addEventListener('click', () => togglePanelMode(true));
 
     // Close/Cancel
     host.querySelector('#__em_close')?.addEventListener('click', stop);
@@ -2711,10 +2985,16 @@
       StateStore.set({ prefs });
     });
 
-    // Drag - use entire header as drag handle
+    // Drag - use entire header as drag handle (for full panel)
     const dragHandle = host.querySelector('#__em_drag_handle');
     if (dragHandle) {
       DragController.init(dragHandle);
+    }
+
+    // Drag - also for compact panel
+    const compactDrag = host.querySelector('#__em_compact_drag');
+    if (compactDrag) {
+      DragController.init(compactDrag);
     }
 
     syncUIWithState();
