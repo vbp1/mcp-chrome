@@ -659,6 +659,35 @@ async function deleteMarker(marker: ElementMarker) {
 
 async function validateMarker(marker: ElementMarker) {
   try {
+    // Get current active tab
+    const [currentTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const currentTabUrl = currentTab?.url || '';
+
+    // Check if current tab matches the marker's URL (exact match)
+    const isMatching = isCurrentTabMatchingMarkerUrl(currentTabUrl, marker);
+
+    if (!isMatching && marker.url) {
+      // Open marker's page in a new tab and wait for it to load
+      const newTab = await chrome.tabs.create({ url: marker.url, active: true });
+
+      // Wait for the tab to finish loading
+      await new Promise<void>((resolve) => {
+        const listener = (tabId: number, changeInfo: chrome.tabs.TabChangeInfo) => {
+          if (tabId === newTab.id && changeInfo.status === 'complete') {
+            chrome.tabs.onUpdated.removeListener(listener);
+            resolve();
+          }
+        };
+        chrome.tabs.onUpdated.addListener(listener);
+
+        // Timeout after 10 seconds
+        setTimeout(() => {
+          chrome.tabs.onUpdated.removeListener(listener);
+          resolve();
+        }, 10000);
+      });
+    }
+
     const res: any = await chrome.runtime.sendMessage({
       type: BACKGROUND_MESSAGE_TYPES.ELEMENT_MARKER_VALIDATE,
       selector: marker.selector,
