@@ -114,7 +114,10 @@ export class QuickPanelAgentBridge {
     if (this.disposed) return;
     this.disposed = true;
 
-    chrome.runtime.onMessage.removeListener(this.boundMessageHandler);
+    // Extension context may be invalidated - check before cleanup
+    if (chrome.runtime?.onMessage) {
+      chrome.runtime.onMessage.removeListener(this.boundMessageHandler);
+    }
     this.listenersByRequestId.clear();
     this.bufferByRequestId.clear();
 

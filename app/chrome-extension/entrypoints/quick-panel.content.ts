@@ -105,7 +105,10 @@ export default defineContentScript({
 
     // Cleanup on page unload
     window.addEventListener('unload', () => {
-      chrome.runtime.onMessage.removeListener(handleMessage);
+      // Extension context may be invalidated during page unload (MV3)
+      if (chrome.runtime?.onMessage) {
+        chrome.runtime.onMessage.removeListener(handleMessage);
+      }
       if (controller) {
         controller.dispose();
         controller = null;

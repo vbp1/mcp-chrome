@@ -56,7 +56,10 @@
   // --- Self Cleanup ---
   // When the cleanup signal arrives, this bridge must also clean itself up.
   const cleanupHandler = () => {
-    chrome.runtime.onMessage.removeListener(messageHandler);
+    // Extension context may be invalidated - check before cleanup
+    if (chrome.runtime?.onMessage) {
+      chrome.runtime.onMessage.removeListener(messageHandler);
+    }
     window.removeEventListener(EVENT_NAME.RESPONSE, responseHandler);
     window.removeEventListener(EVENT_NAME.CLEANUP, cleanupHandler);
     delete window.__INJECT_SCRIPT_TOOL_UNIVERSAL_BRIDGE_LOADED__;
