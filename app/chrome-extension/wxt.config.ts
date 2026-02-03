@@ -120,7 +120,7 @@ export default defineConfig({
           content_security_policy: {
             // Allow inline styles injected by Vite (compiled CSS) and data images used in UI thumbnails
             extension_pages:
-              "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:;",
+              "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http://127.0.0.1:*;",
           },
         }),
   },

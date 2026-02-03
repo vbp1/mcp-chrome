@@ -1203,6 +1203,7 @@ export function registerAgentRoutes(fastify: FastifyInstance, options: AgentRout
         reply
           .header('Content-Type', contentType)
           .header('Cache-Control', 'public, max-age=31536000, immutable')
+          .header('Cross-Origin-Resource-Policy', 'cross-origin')
           .send(buffer);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
