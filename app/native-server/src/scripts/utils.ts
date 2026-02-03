@@ -236,15 +236,18 @@ async function ensureWindowsFilePermissions(packageDistDir: string): Promise<voi
 /**
  * Create Native Messaging host manifest content
  */
-export async function createManifestContent(): Promise<any> {
+export async function createManifestContent(extraExtensionIds?: string[]): Promise<any> {
   const mainPath = await getMainPath();
+
+  const allIds = [EXTENSION_ID, ...(extraExtensionIds ?? [])];
+  const uniqueIds = [...new Set(allIds)];
 
   return {
     name: HOST_NAME,
     description: DESCRIPTION,
-    path: mainPath, // Node.js可执行文件路径
+    path: mainPath,
     type: 'stdio',
-    allowed_origins: [`chrome-extension://${EXTENSION_ID}/`],
+    allowed_origins: uniqueIds.map((id) => `chrome-extension://${id}/`),
   };
 }
 
@@ -291,15 +294,19 @@ function verifyWindowsRegistryEntry(registryKey: string, expectedPath: string): 
  */
 export async function registerUserLevelHostWithNodePath(
   browsers?: BrowserType[],
+  extraExtensionIds?: string[],
 ): Promise<boolean> {
   writeNodePathFile(path.join(__dirname, '..'));
-  return tryRegisterUserLevelHost(browsers);
+  return tryRegisterUserLevelHost(browsers, extraExtensionIds);
 }
 
 /**
  * 尝试注册用户级别的Native Messaging主机
  */
-export async function tryRegisterUserLevelHost(targetBrowsers?: BrowserType[]): Promise<boolean> {
+export async function tryRegisterUserLevelHost(
+  targetBrowsers?: BrowserType[],
+  extraExtensionIds?: string[],
+): Promise<boolean> {
   try {
     console.log(colorText('Attempting to register user-level Native Messaging host...', 'blue'));
 
@@ -319,7 +326,7 @@ export async function tryRegisterUserLevelHost(targetBrowsers?: BrowserType[]): 
     }
 
     // 3. 创建清单内容
-    const manifest = await createManifestContent();
+    const manifest = await createManifestContent(extraExtensionIds);
 
     let successCount = 0;
     const results: { browser: string; success: boolean; error?: string }[] = [];
@@ -401,7 +408,7 @@ if (process.platform === 'win32') {
 /**
  * 使用提升权限注册系统级清单
  */
-export async function registerWithElevatedPermissions(): Promise<void> {
+export async function registerWithElevatedPermissions(extraExtensionIds?: string[]): Promise<void> {
   try {
     console.log(colorText('Attempting to register system-level manifest...', 'blue'));
 
@@ -409,7 +416,7 @@ export async function registerWithElevatedPermissions(): Promise<void> {
     await ensureExecutionPermissions();
 
     // 2. 准备清单内容
-    const manifest = await createManifestContent();
+    const manifest = await createManifestContent(extraExtensionIds);
 
     // 3. 获取系统级清单路径
     const manifestPath = getSystemManifestPath();

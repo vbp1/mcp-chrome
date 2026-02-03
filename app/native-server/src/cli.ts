@@ -26,10 +26,17 @@ program
   .option('-s, --system', 'Use system-level installation (requires administrator/sudo privileges)')
   .option('-b, --browser <browser>', 'Register for specific browser (chrome, chromium, or all)')
   .option('-d, --detect', 'Auto-detect installed browsers')
+  .option(
+    '-e, --extension-id <id>',
+    'Additional extension ID to allow (for custom/unpacked extensions)',
+  )
   .action(async (options) => {
     try {
       // Write Node.js path for run_host scripts
       writeNodePathFile(__dirname);
+
+      // Collect extra extension IDs from CLI flag
+      const extraExtensionIds = options.extensionId ? [options.extensionId] : undefined;
 
       // Determine which browsers to register
       let targetBrowsers: BrowserType[] | undefined;
@@ -85,7 +92,7 @@ program
       // If --system option is specified or running with root/administrator privileges
       if (options.system || hasElevatedPermissions) {
         // TODO: Update registerWithElevatedPermissions to support multiple browsers
-        await registerWithElevatedPermissions();
+        await registerWithElevatedPermissions(extraExtensionIds);
         console.log(
           colorText('System-level Native Messaging host registered successfully!', 'green'),
         );
@@ -98,7 +105,7 @@ program
       } else {
         // Regular user-level installation
         console.log(colorText('Registering user-level Native Messaging host...', 'blue'));
-        const success = await tryRegisterUserLevelHost(targetBrowsers);
+        const success = await tryRegisterUserLevelHost(targetBrowsers, extraExtensionIds);
 
         if (success) {
           console.log(colorText('Native Messaging host registered successfully!', 'green'));

@@ -10,7 +10,11 @@ import IconsResolver from 'unplugin-icons/resolver';
 config({ path: resolve(process.cwd(), '.env') });
 config({ path: resolve(process.cwd(), '.env.local') });
 
-const CHROME_EXTENSION_KEY = process.env.CHROME_EXTENSION_KEY;
+// Deterministic dev key so all developers get the same Extension ID (boikkdejnhfpdpojdjmhllpngplpnang)
+// without manual configuration. Override via CHROME_EXTENSION_KEY env var if needed.
+const DEV_EXTENSION_KEY =
+  'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAjVPXPgTZX+q7df+oqIypLPuuZYdIVx4jUNYJF52HtkFCX2u95Yu9hBEwvlsTXwalpcyCd/qem643CTcU0HYm2q/57qwiNLhImVpbpnlK0JqasijkISV8EG3L9Pf1Spuhm5F29B8bN58yR/s6Fi0sEyBhC56dSolM+dGGqFUHaRlE4Ap1izhPlCrni7JvLaV9XvOLhZvNkEC6Rj8UiVNGXrkBj58zlZJW5kxTrHYMjPRFzr1Nwao7dnMNPdMcYjUba+Yt9KwGbf5sm1h/DoEy2GQC2l3pDnNIvcop3rp4prQt/IuUT3d312yxK2Pw7j9ILvSKl1V92E8JL5zA5us51QIDAQAB';
+const CHROME_EXTENSION_KEY = process.env.CHROME_EXTENSION_KEY || DEV_EXTENSION_KEY;
 // Detect dev mode early for manifest-level switches
 const IS_DEV = process.env.NODE_ENV !== 'production' && process.env.MODE !== 'production';
 
@@ -32,7 +36,6 @@ export default defineConfig({
     // ],
   },
   manifest: {
-    // Use environment variable for the key, fallback to undefined if not set
     key: CHROME_EXTENSION_KEY,
     default_locale: 'en',
     name: '__MSG_extensionName__',
