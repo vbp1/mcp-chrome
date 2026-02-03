@@ -5,6 +5,7 @@ import type {
   EngineExecutionContext,
   EngineName,
   EngineInitOptions,
+  EngineModelInfo,
   RunningExecution,
 } from './engines/types';
 import type { AgentMessage, RealtimeEvent } from './types';
@@ -525,5 +526,17 @@ export class AgentChatService {
       });
     }
     return result;
+  }
+
+  /**
+   * Fetch supported models from a specific engine.
+   * Returns empty array if the engine doesn't support dynamic model listing.
+   */
+  async getEngineModels(engineName: EngineName): Promise<EngineModelInfo[]> {
+    const engine = this.engines.get(engineName);
+    if (!engine?.getSupportedModels) {
+      return [];
+    }
+    return engine.getSupportedModels();
   }
 }

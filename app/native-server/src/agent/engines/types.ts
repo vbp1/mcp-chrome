@@ -108,6 +108,15 @@ export interface EngineExecutionContext {
   persistManagementInfo?: ManagementInfoPersistCallback;
 }
 
+/**
+ * Model information returned by engine's getSupportedModels().
+ */
+export interface EngineModelInfo {
+  id: string;
+  name: string;
+  description?: string;
+}
+
 export interface AgentEngine {
   name: EngineName;
   /**
@@ -115,6 +124,11 @@ export interface AgentEngine {
    */
   supportsMcp?: boolean;
   initializeAndRun(options: EngineInitOptions, ctx: EngineExecutionContext): Promise<void>;
+  /**
+   * Dynamically fetch supported models from the engine's SDK/CLI.
+   * Returns undefined if the engine does not support dynamic model listing.
+   */
+  getSupportedModels?(): Promise<EngineModelInfo[]>;
 }
 
 /**

@@ -71,7 +71,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import type { AgentProject, AgentEngineInfo } from 'chrome-mcp-shared';
 import {
   getModelsForCli,
@@ -88,6 +88,7 @@ const props = defineProps<{
   selectedProject: AgentProject | null;
   isSavingRoot: boolean;
   isSavingPreference: boolean;
+  serverPort: number | null;
 }>();
 
 const emit = defineEmits<{
@@ -99,8 +100,44 @@ const emit = defineEmits<{
   'save-preference': [];
 }>();
 
-// Get available models based on selected CLI
+// Dynamic models loaded from server
+const dynamicModels = ref<ModelDefinition[]>([]);
+
+async function fetchDynamicModels(engineName: string): Promise<void> {
+  if (!engineName || !props.serverPort) return;
+  try {
+    const url = `http://127.0.0.1:${props.serverPort}/agent/engines/${engineName}/models`;
+    const response = await fetch(url);
+    if (response.ok) {
+      const data = await response.json();
+      const models: ModelDefinition[] = (data.models || []).map(
+        (m: { id: string; name: string; description?: string }) => ({
+          id: m.id,
+          name: m.name,
+          description: m.description,
+        }),
+      );
+      if (models.length > 0) {
+        dynamicModels.value = models;
+      }
+    }
+  } catch {
+    // Fallback to static models silently
+  }
+}
+
+watch(
+  () => props.selectedCli,
+  (cli) => {
+    dynamicModels.value = [];
+    if (cli) fetchDynamicModels(cli);
+  },
+  { immediate: true },
+);
+
+// Get available models based on selected CLI (dynamic with static fallback)
 const availableModels = computed<ModelDefinition[]>(() => {
+  if (dynamicModels.value.length > 0) return dynamicModels.value;
   return getModelsForCli(props.selectedCli);
 });
 

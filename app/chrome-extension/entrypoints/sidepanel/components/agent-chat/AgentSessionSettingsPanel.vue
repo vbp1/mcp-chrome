@@ -341,7 +341,7 @@
 <script lang="ts" setup>
 import { ref, computed, watch } from 'vue';
 import type { AgentSession, AgentManagementInfo, AgentSystemPromptConfig } from 'chrome-mcp-shared';
-import { getModelsForCli } from '@/common/agent-models';
+import { getModelsForCli, type ModelDefinition } from '@/common/agent-models';
 
 const props = defineProps<{
   open: boolean;
@@ -349,6 +349,7 @@ const props = defineProps<{
   managementInfo: AgentManagementInfo | null;
   isLoading: boolean;
   isSaving: boolean;
+  serverPort: number | null;
 }>();
 
 const emit = defineEmits<{
@@ -371,13 +372,56 @@ const localCustomPrompt = ref('');
 const localAppendToPrompt = ref(false);
 const localPromptAppend = ref('');
 
+// Dynamic models loaded from server
+const dynamicModels = ref<ModelDefinition[]>([]);
+const modelsLoading = ref(false);
+
 // Computed
 const isClaudeEngine = computed(() => props.session?.engineName === 'claude');
 
 const availableModels = computed(() => {
+  if (dynamicModels.value.length > 0) return dynamicModels.value;
   if (!props.session?.engineName) return [];
   return getModelsForCli(props.session.engineName);
 });
+
+// Fetch dynamic models when panel opens
+async function fetchDynamicModels(): Promise<void> {
+  const engineName = props.session?.engineName;
+  if (!engineName || !props.serverPort) return;
+
+  modelsLoading.value = true;
+  try {
+    const url = `http://127.0.0.1:${props.serverPort}/agent/engines/${engineName}/models`;
+    const response = await fetch(url);
+    if (response.ok) {
+      const data = await response.json();
+      const models: ModelDefinition[] = (data.models || []).map(
+        (m: { id: string; name: string; description?: string }) => ({
+          id: m.id,
+          name: m.name,
+          description: m.description,
+        }),
+      );
+      if (models.length > 0) {
+        dynamicModels.value = models;
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch dynamic models:', error);
+  } finally {
+    modelsLoading.value = false;
+  }
+}
+
+watch(
+  () => props.open,
+  (isOpen) => {
+    if (isOpen) {
+      fetchDynamicModels();
+    }
+  },
+);
 
 // Initialize local state when session changes
 watch(

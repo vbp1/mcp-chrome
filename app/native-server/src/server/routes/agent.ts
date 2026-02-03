@@ -106,6 +106,27 @@ export function registerAgentRoutes(fastify: FastifyInstance, options: AgentRout
     }
   });
 
+  fastify.get<{ Params: { name: string } }>(
+    '/agent/engines/:name/models',
+    async (request, reply) => {
+      const { name } = request.params;
+      if (!isValidEngineName(name)) {
+        return reply.status(HTTP_STATUS.BAD_REQUEST).send({ error: 'Invalid engine name' });
+      }
+      try {
+        const models = await chatService.getEngineModels(name);
+        reply.status(HTTP_STATUS.OK).send({ models });
+      } catch (error) {
+        fastify.log.error({ err: error }, `Failed to fetch models for engine: ${name}`);
+        if (!reply.sent) {
+          reply
+            .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+            .send({ error: ERROR_MESSAGES.INTERNAL_SERVER_ERROR });
+        }
+      }
+    },
+  );
+
   // ============================================================
   // Project Routes
   // ============================================================

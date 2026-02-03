@@ -1,6 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
-import type { AgentEngine, EngineExecutionContext, EngineInitOptions } from './types';
+import type {
+  AgentEngine,
+  EngineExecutionContext,
+  EngineInitOptions,
+  EngineModelInfo,
+} from './types';
 import type { AgentMessage, RealtimeEvent } from '../types';
 import { detectCcr, validateCcrConfig } from '../ccr-detector';
 import { getProject } from '../project-service';
@@ -55,6 +60,70 @@ export class ClaudeEngine implements AgentEngine {
    * Maximum number of stderr lines to keep in memory.
    */
   private static readonly MAX_STDERR_LINES = 200;
+
+  /** In-memory cache for supported models with TTL. */
+  private static modelsCache: { models: EngineModelInfo[]; fetchedAt: number } | null = null;
+  private static readonly MODELS_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+  /**
+   * Dynamically fetch supported models from the Claude Agent SDK.
+   * Uses supportedModels() method on the Query object.
+   * Results are cached for 24 hours.
+   */
+  async getSupportedModels(): Promise<EngineModelInfo[]> {
+    // Return from cache if still valid
+    if (
+      ClaudeEngine.modelsCache &&
+      Date.now() - ClaudeEngine.modelsCache.fetchedAt < ClaudeEngine.MODELS_CACHE_TTL_MS
+    ) {
+      return ClaudeEngine.modelsCache.models;
+    }
+
+    let query: (args: { prompt: string; options?: Record<string, unknown> }) => any;
+    try {
+      const sdkModuleName = '@anthropic-ai/claude-agent-sdk';
+      const sdk = await (Function(
+        'moduleName',
+        'return import(moduleName)',
+      )(sdkModuleName) as Promise<any>);
+      query = sdk.query;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`[ClaudeEngine] Failed to load SDK for model listing: ${message}`);
+      return [];
+    }
+
+    const abortController = new AbortController();
+    try {
+      const q = query({
+        prompt: '',
+        options: {
+          abortController,
+          permissionMode: 'plan',
+          maxTurns: 0,
+        },
+      });
+
+      const rawModels: Array<{ value: string; displayName: string; description: string }> =
+        await q.supportedModels();
+
+      const models: EngineModelInfo[] = rawModels.map((m) => ({
+        id: m.value,
+        name: m.displayName,
+        description: m.description || undefined,
+      }));
+
+      ClaudeEngine.modelsCache = { models, fetchedAt: Date.now() };
+      console.error(`[ClaudeEngine] Fetched ${models.length} supported models`);
+      return models;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`[ClaudeEngine] Failed to fetch supported models: ${message}`);
+      return ClaudeEngine.modelsCache?.models ?? [];
+    } finally {
+      abortController.abort();
+    }
+  }
 
   async initializeAndRun(options: EngineInitOptions, ctx: EngineExecutionContext): Promise<void> {
     const {

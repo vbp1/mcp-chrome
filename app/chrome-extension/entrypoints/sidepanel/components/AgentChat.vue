@@ -106,6 +106,7 @@
       :is-picking="isPickingDirectory"
       :is-saving="isSavingPreference"
       :error="projects.projectError.value"
+      :server-port="server.serverPort.value"
       @project:select="handleProjectSelect"
       @project:new="handleNewProject"
       @cli:update="selectedCli = $event"
@@ -150,6 +151,7 @@
       :management-info="currentManagementInfo"
       :is-loading="sessionSettingsLoading"
       :is-saving="sessionSettingsSaving"
+      :server-port="server.serverPort.value"
       @close="handleCloseSessionSettings"
       @save="handleSaveSessionSettings"
     />
