@@ -18,10 +18,6 @@
 
 Chrome MCP Server is a Chrome extension-based **Model Context Protocol (MCP) server** that exposes your Chrome browser functionality to AI assistants like Claude, enabling complex browser automation, content analysis, and semantic search. Unlike traditional browser automation tools (like Playwright), **Chrome MCP Server** directly uses your daily Chrome browser, leveraging existing user habits, configurations, and login states, allowing various large models or chatbots to take control of your browser and truly become your everyday assistant.
 
-## ✨ New Features(2025/12/30)
-
-- **A New Visual Editor for Claude Code**, for more detail here: [VisualEditor](docs/VisualEditor.md)
-
 ## ✨ Core Features
 
 - 😁 **Chatbot/Model Agnostic**: Let any LLM or chatbot client or agent you prefer automate your browser
@@ -33,6 +29,7 @@ Chrome MCP Server is a Chrome extension-based **Model Context Protocol (MCP) ser
 - 🔍 **Smart Content Analysis**: AI-powered text extraction and similarity matching
 - 🌐 **20+ Tools**: Support for screenshots, network monitoring, interactive operations, bookmark management, browsing history, and 20+ other tools
 - 🚀 **SIMD-Accelerated AI**: Custom WebAssembly SIMD optimization for 4-8x faster vector operations
+- 🎨 **Visual Editor for Claude Code**: Edit web pages visually with AI assistance ([details](docs/VisualEditor.md))
 
 ## 🆚 Comparison with Similar Projects
 
@@ -52,40 +49,50 @@ Chrome MCP Server is a Chrome extension-based **Model Context Protocol (MCP) ser
 - Node.js >= 20.0.0 and pnpm/npm
 - Chrome/Chromium browser
 
-### Installation Steps
+### Option A: Install from Release (Recommended)
 
-1. **Download the latest Chrome extension from GitHub**
-
-Download link: https://github.com/hangwin/mcp-chrome/releases
+1. **Download the latest Chrome extension** from [GitHub Releases](https://github.com/hangwin/mcp-chrome/releases).
 
 2. **Install mcp-chrome-bridge globally**
 
-npm
+   ```bash
+   # npm
+   npm install -g mcp-chrome-bridge
+
+   # pnpm (enable postinstall scripts first)
+   pnpm config set enable-pre-post-scripts true
+   pnpm install -g mcp-chrome-bridge
+   ```
+
+   If automatic registration didn't run, register manually:
+
+   ```bash
+   mcp-chrome-bridge register
+   ```
+
+3. **Load the Chrome extension**
+   - Open `chrome://extensions/` and enable **Developer mode**
+   - Click **Load unpacked** and select the downloaded extension folder
+   - Click the extension icon, then click **Connect**
+
+### Option B: Build from Source
+
+See the full cross-platform guide: **[Building from Source](docs/AGENT_SETUP_PROMPT.md)**
 
 ```bash
-npm install -g mcp-chrome-bridge
+pnpm install
+pnpm run build:shared
+pnpm run build:native
+pnpm run build:extension
 ```
 
-pnpm
+Then load the extension from `app/chrome-extension/.output/chrome-mv3` and register the native host:
 
 ```bash
-# Method 1: Enable scripts globally (recommended)
-pnpm config set enable-pre-post-scripts true
-pnpm install -g mcp-chrome-bridge
-
-# Method 2: Manual registration (if postinstall doesn't run)
-pnpm install -g mcp-chrome-bridge
-mcp-chrome-bridge register
+node app/native-server/dist/cli.js register --browser chrome
 ```
 
-> Note: pnpm v7+ disables postinstall scripts by default for security. The `enable-pre-post-scripts` setting controls whether pre/post install scripts run. If automatic registration fails, use the manual registration command above.
-
-3. **Load Chrome Extension**
-   - Open Chrome and go to `chrome://extensions/`
-   - Enable "Developer mode"
-   - Click "Load unpacked" and select `your/dowloaded/extension/folder`
-   - Click the extension icon to open the plugin, then click connect to see the MCP configuration
-     <img width="475" alt="Screenshot 2025-06-09 15 52 06" src="https://github.com/user-attachments/assets/241e57b8-c55f-41a4-9188-0367293dc5bc" />
+Verify with `node app/native-server/dist/cli.js doctor`.
 
 ### Usage with MCP Protocol Clients
 
@@ -137,10 +144,6 @@ Then your final path would be: /Users/xxx/Library/pnpm/global/5/node_modules/mcp
   }
 }
 ```
-
-eg：config in augment:
-
-<img width="494" alt="截屏2025-06-22 22 11 25" src="https://github.com/user-attachments/assets/48eefc0c-a257-4d3b-8bbe-d7ff716de2bf" />
 
 ## 🛠️ Available Tools
 
@@ -300,6 +303,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📚 More Documentation
 
+- [Building from Source](docs/AGENT_SETUP_PROMPT.md) - Cross-platform setup guide (Windows / macOS / Linux)
 - [Architecture Design](docs/ARCHITECTURE.md) - Detailed technical architecture documentation
-- [TOOLS API](docs/TOOLS.md) - Complete tool API documentation
+- [Visual Editor](docs/VisualEditor.md) - Visual web editing mode for Claude Code
+- [Tools API](docs/TOOLS.md) - Complete tool API documentation
 - [Troubleshooting](docs/TROUBLESHOOTING.md) - Common issue solutions
