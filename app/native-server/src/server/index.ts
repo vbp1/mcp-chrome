@@ -25,7 +25,6 @@ import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { getMcpServer } from '../mcp/mcp-server';
 import { AgentStreamManager } from '../agent/stream-manager';
 import { AgentChatService } from '../agent/chat-service';
-import { CodexEngine } from '../agent/engines/codex';
 import { ClaudeEngine } from '../agent/engines/claude';
 import { closeDb } from '../agent/db';
 import { registerAgentRoutes } from './routes';
@@ -55,7 +54,7 @@ export class Server {
     this.fastify = Fastify({ logger: SERVER_CONFIG.LOGGER_ENABLED });
     this.agentStreamManager = new AgentStreamManager();
     this.agentChatService = new AgentChatService({
-      engines: [new CodexEngine(), new ClaudeEngine()],
+      engines: [new ClaudeEngine()],
       streamManager: this.agentStreamManager,
     });
     this.setupPlugins();

@@ -1,5 +1,4 @@
 import type { AgentAttachment, RealtimeEvent } from '../types';
-import type { CodexEngineConfig } from 'chrome-mcp-shared';
 
 export interface EngineInitOptions {
   sessionId: string;
@@ -58,11 +57,6 @@ export interface EngineInitOptions {
    * Only applicable to ClaudeEngine; when true, CCR will be auto-detected.
    */
   useCcr?: boolean;
-  /**
-   * Optional Codex-specific configuration overrides.
-   * Only applicable to CodexEngine; merged with DEFAULT_CODEX_CONFIG.
-   */
-  codexConfig?: Partial<CodexEngineConfig>;
 }
 
 /**
@@ -95,7 +89,7 @@ export interface ClaudeManagementInfo {
  */
 export type ManagementInfoPersistCallback = (info: ClaudeManagementInfo) => Promise<void>;
 
-export type EngineName = 'claude' | 'codex';
+export type EngineName = 'claude';
 
 export interface EngineExecutionContext {
   /**

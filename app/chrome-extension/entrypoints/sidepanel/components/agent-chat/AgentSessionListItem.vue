@@ -232,8 +232,6 @@ const engineAbbrev = computed(() => {
   switch (name) {
     case 'claude':
       return 'CL';
-    case 'codex':
-      return 'CX';
     default:
       // Fallback for any unknown engine name
       return (
@@ -314,7 +312,6 @@ const containerStyle = computed(() => ({
 const engineBadgeStyle = computed(() => {
   const colors: Record<string, string> = {
     claude: '#c87941',
-    codex: '#10a37f',
   };
   const bg = colors[props.session.engineName] || '#6b7280';
   return {

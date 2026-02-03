@@ -75,7 +75,7 @@ export function getChromeMcpPort(): number {
 
 /**
  * Get the full URL to the local Chrome MCP HTTP endpoint.
- * This URL is used by Claude/Codex agents to connect to the MCP server.
+ * This URL is used by Claude agents to connect to the MCP server.
  */
 export function getChromeMcpUrl(): string {
   return `http://${SERVER_CONFIG.HOST}:${getChromeMcpPort()}/mcp`;

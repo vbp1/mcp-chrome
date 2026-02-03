@@ -342,12 +342,10 @@ export class AgentChatService {
       allowDangerouslySkipPermissions: dbSession?.allowDangerouslySkipPermissions,
       systemPromptConfig: dbSession?.systemPromptConfig,
       optionsConfig: dbSession?.optionsConfig,
-      // Pass Claude session ID for session resumption (ClaudeEngine only)
-      resumeClaudeSessionId: engineName === 'claude' ? resumeClaudeSessionId : undefined,
-      // Pass useCcr flag for Claude Code Router support (ClaudeEngine only)
-      useCcr: engineName === 'claude' ? projectUseCcr : undefined,
-      // Pass Codex-specific configuration (CodexEngine only)
-      codexConfig: engineName === 'codex' ? dbSession?.optionsConfig?.codexConfig : undefined,
+      // Pass Claude session ID for session resumption
+      resumeClaudeSessionId: resumeClaudeSessionId,
+      // Pass useCcr flag for Claude Code Router support
+      useCcr: projectUseCcr,
     };
 
     // Create abort controller for cancellation support

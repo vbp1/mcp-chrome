@@ -1,4 +1,4 @@
-# A Visual Editor for Claude Code & Codex
+# A Visual Editor for Claude Code
 
 **How to enable:**
 `Right Click > Chrome MCP Server > Toggle Web Editing Mode`
@@ -36,7 +36,7 @@ Inspect and modify React and Vue component props in real-time. Test how your com
 
 ### Point, Click & Prompt
 
-Select any element on the page and send instructions directly to Claude Code or Codex. The tool automatically captures the component's structure and context, enabling the AI to provide modifications with far greater precision and lower latency than global chat contexts.
+Select any element on the page and send instructions directly to Claude Code. The tool automatically captures the component's structure and context, enabling the AI to provide modifications with far greater precision and lower latency than global chat contexts.
 
 Simply click an element and say, _"Make this bigger"_ or _"Change the background to red"_, and watch Claude Code implement the exact changes in seconds.
 

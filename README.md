@@ -20,7 +20,7 @@ Chrome MCP Server is a Chrome extension-based **Model Context Protocol (MCP) ser
 
 ## ✨ New Features(2025/12/30)
 
-- **A New Visual Editor for Claude Code & Codex**, for more detail here: [VisualEditor](docs/VisualEditor.md)
+- **A New Visual Editor for Claude Code**, for more detail here: [VisualEditor](docs/VisualEditor.md)
 
 ## ✨ Core Features
 

@@ -58,7 +58,7 @@ export const sessions = sqliteTable(
       .notNull()
       .references(() => projects.id, { onDelete: 'cascade' }),
     /**
-     * Engine name: claude, codex, etc.
+     * Engine name: claude, etc.
      */
     engineName: text('engine_name').notNull(),
     /**

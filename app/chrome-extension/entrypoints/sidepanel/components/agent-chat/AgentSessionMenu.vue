@@ -206,10 +206,6 @@ const renameInputRef = ref<HTMLInputElement | null>(null);
 function getEngineColor(engineName: string): string {
   const colors: Record<string, string> = {
     claude: '#c87941',
-    codex: '#10a37f',
-    cursor: '#8b5cf6',
-    qwen: '#6366f1',
-    glm: '#ef4444',
   };
   return colors[engineName] || '#6b7280';
 }

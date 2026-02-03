@@ -1,4 +1,4 @@
-## 让Claude Code/Codex也能使用的可视化编辑器
+## 让Claude Code也能使用的可视化编辑器
 
 如何开启：`右键 > chrome mcp server > 切换网页编辑模式`
 或者快捷键： `cmd/ctrl + shift + o`
@@ -35,7 +35,7 @@
 
 ### 点选并提示
 
-选中任意页面元素，直接向Claude Code或者Codex发送修改指令。工具会自动提取选中组件结构与上下文信息发送给 AI，从而实现比全局对话更精准、更低延迟的代码修改。比如你可以点选某个元素然后说「把这个变大一些」，让Claude Code帮你在几秒内实现精准修改并实时生效
+选中任意页面元素，直接向Claude Code发送修改指令。工具会自动提取选中组件结构与上下文信息发送给 AI，从而实现比全局对话更精准、更低延迟的代码修改。比如你可以点选某个元素然后说「把这个变大一些」，让Claude Code帮你在几秒内实现精准修改并实时生效
 
 <div align="center">
   <a href="https://youtu.be/dSkt5HaTU_s">

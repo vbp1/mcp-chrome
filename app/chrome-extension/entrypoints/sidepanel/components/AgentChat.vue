@@ -67,8 +67,6 @@
             :engine-name="currentEngineName"
             :selected-model="currentSessionModel"
             :available-models="currentAvailableModels"
-            :reasoning-effort="currentReasoningEffort"
-            :available-reasoning-efforts="currentAvailableReasoningEfforts"
             :element-references="elementRefs.allReferences.value"
             @update:model-value="handleInputChange"
             @submit="handleSend"
@@ -80,7 +78,6 @@
             @attachment:dragover="attachments.handleDragOver"
             @attachment:dragleave="attachments.handleDragLeave"
             @model:change="handleComposerModelChange"
-            @reasoning-effort:change="handleComposerReasoningEffortChange"
             @session:settings="handleComposerOpenSettings"
             @session:reset="handleComposerReset"
             @element-chip:click="handleElementChipClick"
@@ -103,7 +100,6 @@
       :selected-project-id="projects.selectedProjectId.value"
       :selected-cli="selectedCli"
       :model="model"
-      :reasoning-effort="reasoningEffort"
       :use-ccr="useCcr"
       :enable-chrome-mcp="enableChromeMcp"
       :engines="server.engines.value"
@@ -114,7 +110,6 @@
       @project:new="handleNewProject"
       @cli:update="selectedCli = $event"
       @model:update="model = $event"
-      @reasoning-effort:update="reasoningEffort = $event"
       @ccr:update="useCcr = $event"
       @chrome-mcp:update="enableChromeMcp = $event"
       @save="handleSaveSettings"
@@ -166,7 +161,7 @@
 
 <script lang="ts" setup>
 import { ref, computed, onMounted, onUnmounted, watch, provide } from 'vue';
-import type { AgentStoredMessage, AgentMessage, CodexReasoningEffort } from 'chrome-mcp-shared';
+import type { AgentStoredMessage, AgentMessage } from 'chrome-mcp-shared';
 
 // Composables
 import {
@@ -208,17 +203,12 @@ import type { SessionSettings } from './agent-chat/AgentSessionSettingsPanel.vue
 import AttachmentCachePanel from './agent-chat/AttachmentCachePanel.vue';
 
 // Model utilities
-import {
-  getModelsForCli,
-  getCodexReasoningEfforts,
-  getDefaultModelForCli,
-} from '@/common/agent-models';
+import { getModelsForCli, getDefaultModelForCli } from '@/common/agent-models';
 import { BACKGROUND_MESSAGE_TYPES } from '@/common/message-types';
 
 // Local UI state
 const selectedCli = ref('');
 const model = ref('');
-const reasoningEffort = ref<CodexReasoningEffort>('medium');
 const useCcr = ref(false);
 const enableChromeMcp = ref(true);
 const isSavingPreference = ref(false);
@@ -238,19 +228,6 @@ function getNormalizedModel(): string {
   if (models.length === 0) return ''; // Unknown CLI
   const isValid = models.some((m) => m.id === trimmedModel);
   return isValid ? trimmedModel : '';
-}
-
-/**
- * Get normalized reasoning effort that is valid for the current model.
- * Used when creating/updating codex sessions.
- */
-function getNormalizedReasoningEffort(): CodexReasoningEffort {
-  if (selectedCli.value !== 'codex') return 'medium';
-  const effectiveModel = getNormalizedModel() || getDefaultModelForCli('codex');
-  const supported = getCodexReasoningEfforts(effectiveModel);
-  return supported.includes(reasoningEffort.value)
-    ? reasoningEffort.value
-    : (supported[supported.length - 1] as CodexReasoningEffort);
 }
 
 const isPickingDirectory = ref(false);
@@ -404,8 +381,6 @@ const engineDisplayName = computed(() => {
   switch (name) {
     case 'claude':
       return 'Claude Code';
-    case 'codex':
-      return 'Codex';
     default:
       return 'Agent';
   }
@@ -422,19 +397,6 @@ const currentAvailableModels = computed(() => {
   const session = sessions.selectedSession.value;
   if (!session) return [];
   return getModelsForCli(session.engineName);
-});
-
-const currentReasoningEffort = computed(() => {
-  const session = sessions.selectedSession.value;
-  if (!session || session.engineName !== 'codex') return 'medium' as CodexReasoningEffort;
-  return session.optionsConfig?.codexConfig?.reasoningEffort ?? 'medium';
-});
-
-const currentAvailableReasoningEfforts = computed(() => {
-  const session = sessions.selectedSession.value;
-  if (!session || session.engineName !== 'codex') return [] as readonly CodexReasoningEffort[];
-  const effectiveModel = currentSessionModel.value || getDefaultModelForCli('codex');
-  return getCodexReasoningEfforts(effectiveModel);
 });
 
 // Track pending history load with nonce to prevent A→B→A race conditions
@@ -663,23 +625,11 @@ async function handleNewSession(): Promise<void> {
   // Clear previous request state (in chat view, creating new session should reset state)
   clearRequestState();
 
-  const engineName =
-    (selectedCli.value as 'claude' | 'codex' | 'cursor' | 'qwen' | 'glm') || 'claude';
-
-  // Include codex config if using codex engine
-  const optionsConfig =
-    engineName === 'codex'
-      ? {
-          codexConfig: {
-            reasoningEffort: getNormalizedReasoningEffort(),
-          },
-        }
-      : undefined;
+  const engineName = (selectedCli.value || 'claude') as 'claude';
 
   const session = await sessions.createSession(projectId, {
     engineName,
     name: `Session ${sessions.sessions.value.length + 1}`,
-    optionsConfig,
   });
 
   // Guard: only clear messages if the new session is still selected
@@ -752,24 +702,6 @@ async function handleComposerModelChange(modelId: string): Promise<void> {
   if (!sessionId) return;
 
   await sessions.updateSession(sessionId, { model: modelId || null });
-}
-
-async function handleComposerReasoningEffortChange(effort: CodexReasoningEffort): Promise<void> {
-  const sessionId = sessions.selectedSessionId.value;
-  const session = sessions.selectedSession.value;
-  if (!sessionId || !session) return;
-
-  const existingOptions = session.optionsConfig ?? {};
-  const existingCodexConfig = existingOptions.codexConfig ?? {};
-  await sessions.updateSession(sessionId, {
-    optionsConfig: {
-      ...existingOptions,
-      codexConfig: {
-        ...existingCodexConfig,
-        reasoningEffort: effort,
-      },
-    },
-  });
 }
 
 // Composer session settings/reset handlers (without sessionId parameter)
@@ -887,10 +819,7 @@ async function handleProjectSelect(projectId: string): Promise<void> {
     enableChromeMcp.value = project.enableChromeMcp !== false;
   }
   // Load sessions for the new project
-  await sessions.ensureDefaultSession(
-    projectId,
-    (selectedCli.value as 'claude' | 'codex' | 'cursor' | 'qwen' | 'glm') || 'claude',
-  );
+  await sessions.ensureDefaultSession(projectId, (selectedCli.value || 'claude') as 'claude');
 
   // Guard again after ensureDefaultSession
   if (projects.selectedProjectId.value !== projectId) {
@@ -921,8 +850,7 @@ async function handleNewProject(): Promise<void> {
         enableChromeMcp.value = project.enableChromeMcp !== false;
 
         // Ensure a default session exists for the new project
-        const engineName =
-          (selectedCli.value as 'claude' | 'codex' | 'cursor' | 'qwen' | 'glm') || 'claude';
+        const engineName = (selectedCli.value || 'claude') as 'claude';
         await sessions.ensureDefaultSession(project.id, engineName);
 
         // Reconnect SSE and load session history
@@ -964,22 +892,11 @@ async function handleSaveSettings(): Promise<void> {
     // If CLI changed, create a new empty session with the new CLI
     const cliChanged = previousCli !== selectedCli.value;
     if (cliChanged && selectedCli.value) {
-      const engineName = selectedCli.value as 'claude' | 'codex' | 'cursor' | 'qwen' | 'glm';
-
-      // Include codex config if using codex engine
-      const optionsConfig =
-        engineName === 'codex'
-          ? {
-              codexConfig: {
-                reasoningEffort: getNormalizedReasoningEffort(),
-              },
-            }
-          : undefined;
+      const engineName = selectedCli.value as 'claude';
 
       const session = await sessions.createSession(project.id, {
         engineName,
         name: `Session ${sessions.sessions.value.length + 1}`,
-        optionsConfig,
       });
 
       // Guard: only clear messages if the new session is still selected
@@ -1075,21 +992,11 @@ async function handleNewSessionAndNavigate(): Promise<void> {
   // Clear previous state before creating new session
   clearRequestState();
 
-  const engineName =
-    (selectedCli.value as 'claude' | 'codex' | 'cursor' | 'qwen' | 'glm') || 'claude';
-  const optionsConfig =
-    engineName === 'codex'
-      ? {
-          codexConfig: {
-            reasoningEffort: getNormalizedReasoningEffort(),
-          },
-        }
-      : undefined;
+  const engineName = (selectedCli.value || 'claude') as 'claude';
 
   const session = await sessions.createSession(projects.selectedProjectId.value, {
     engineName,
     name: `Session ${sessions.sessions.value.length + 1}`,
-    optionsConfig,
   });
 
   // Guard against stale navigation if user switched during createSession await
@@ -1617,7 +1524,7 @@ onMounted(async () => {
       // Note: This won't fetch sessions again since we already did above
       await sessions.ensureDefaultSession(
         projects.selectedProjectId.value,
-        (selectedCli.value as 'claude' | 'codex' | 'cursor' | 'qwen' | 'glm') || 'claude',
+        (selectedCli.value || 'claude') as 'claude',
       );
 
       // Only open SSE and load history if we're in chat view with a valid session

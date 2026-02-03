@@ -218,26 +218,6 @@
             </svg>
           </div>
 
-          <!-- Reasoning Effort (Codex only) -->
-          <select
-            v-if="
-              isCodexEngine && availableReasoningEfforts && availableReasoningEfforts.length > 0
-            "
-            :value="reasoningEffort"
-            class="px-1.5 py-0.5 text-[10px] border-none bg-transparent cursor-pointer"
-            :style="{
-              color: 'var(--ac-text-muted)',
-              fontFamily: 'var(--ac-font-mono)',
-              borderRadius: 'var(--ac-radius-button)',
-            }"
-            :data-tooltip="getMessage('reasoningEffortTooltip')"
-            @change="handleReasoningEffortChange"
-          >
-            <option v-for="effort in availableReasoningEfforts" :key="effort" :value="effort">
-              {{ effort }}
-            </option>
-          </select>
-
           <!-- Reset Button -->
           <button
             class="p-1 ac-btn"
@@ -411,7 +391,6 @@
 
 <script lang="ts" setup>
 import { ref, computed, watch, nextTick, toRef } from 'vue';
-import type { CodexReasoningEffort } from 'chrome-mcp-shared';
 import type { ModelDefinition } from '@/common/agent-models';
 import type { AttachmentWithPreview } from '../../composables/useAttachments';
 import type { RequestState } from '../../composables/useAgentChat';
@@ -438,9 +417,6 @@ const props = defineProps<{
   engineName?: string;
   selectedModel: string;
   availableModels: ModelDefinition[];
-  // Codex reasoning effort props
-  reasoningEffort?: CodexReasoningEffort;
-  availableReasoningEfforts?: readonly CodexReasoningEffort[];
   // Element references for @Element_N highlighting
   elementReferences?: Map<number, ElementReferenceData>;
 }>();
@@ -457,12 +433,8 @@ const isRequestActive = computed(() => {
   );
 });
 
-const isCodexEngine = computed(() => props.engineName === 'codex');
-
-// Image upload is supported for Claude and Codex engines
 const supportsImages = computed(() => {
-  const engine = props.engineName;
-  return engine === 'claude' || engine === 'codex';
+  return props.engineName === 'claude';
 });
 
 // Model selector auto-width
@@ -569,7 +541,6 @@ const emit = defineEmits<{
   'attachment:dragover': [event: DragEvent];
   'attachment:dragleave': [event: DragEvent];
   'model:change': [modelId: string];
-  'reasoning-effort:change': [effort: CodexReasoningEffort];
   'session:settings': [];
   'session:reset': [];
   'element-chip:click': [data: ElementReferenceData, elementNum: number];
@@ -675,11 +646,6 @@ function handlePrimaryAction(): void {
 function handleModelChange(event: Event): void {
   const modelId = (event.target as HTMLSelectElement).value;
   emit('model:change', modelId);
-}
-
-function handleReasoningEffortChange(event: Event): void {
-  const effort = (event.target as HTMLSelectElement).value as CodexReasoningEffort;
-  emit('reasoning-effort:change', effort);
 }
 
 function handleReset(): void {

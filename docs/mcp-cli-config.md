@@ -1,35 +1,11 @@
 # CLI MCP Configuration Guide
 
-This guide explains how to configure Codex CLI and Claude Code to connect to the Chrome MCP Server.
+This guide explains how to configure Claude Code to connect to the Chrome MCP Server.
 
 ## Overview
 
 The Chrome MCP Server exposes its MCP interface at `http://127.0.0.1:12306/mcp` (default port).
-Both Codex CLI and Claude Code can connect to this endpoint to use Chrome browser control tools.
-
-## Codex CLI Configuration
-
-### Option 1: HTTP MCP Server (Recommended)
-
-Add the following to your `~/.codex/config.json`:
-
-```json
-{
-  "mcpServers": {
-    "chrome-mcp": {
-      "url": "http://127.0.0.1:12306/mcp"
-    }
-  }
-}
-```
-
-### Option 2: Via Environment Variable
-
-Set the MCP URL via environment variable before running codex:
-
-```bash
-export MCP_HTTP_PORT=12306
-```
+Claude Code can connect to this endpoint to use Chrome browser control tools.
 
 ## Claude Code Configuration
 

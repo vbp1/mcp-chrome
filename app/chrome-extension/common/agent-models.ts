@@ -5,8 +5,6 @@
  * Based on the pattern from Claudable (other/cweb).
  */
 
-import type { CodexReasoningEffort } from 'chrome-mcp-shared';
-
 // ============================================================
 // Types
 // ============================================================
@@ -16,11 +14,9 @@ export interface ModelDefinition {
   name: string;
   description?: string;
   supportsImages?: boolean;
-  /** Supported reasoning effort levels for Codex models */
-  supportedReasoningEfforts?: readonly CodexReasoningEffort[];
 }
 
-export type AgentCliType = 'claude' | 'codex';
+export type AgentCliType = 'claude';
 
 // ============================================================
 // Claude Models
@@ -50,119 +46,15 @@ export const CLAUDE_MODELS: ModelDefinition[] = [
 export const CLAUDE_DEFAULT_MODEL = 'claude-sonnet-4-5-20250929';
 
 // ============================================================
-// Codex Models
-// ============================================================
-
-/** Standard reasoning efforts supported by all models */
-const CODEX_STANDARD_EFFORTS: readonly CodexReasoningEffort[] = ['low', 'medium', 'high'];
-/** Extended reasoning efforts (includes xhigh) - only for gpt-5.2 and gpt-5.1-codex-max */
-const CODEX_EXTENDED_EFFORTS: readonly CodexReasoningEffort[] = ['low', 'medium', 'high', 'xhigh'];
-
-export const CODEX_MODELS: ModelDefinition[] = [
-  {
-    id: 'gpt-5.1',
-    name: 'GPT-5.1',
-    description: 'OpenAI high-quality reasoning model',
-    supportedReasoningEfforts: CODEX_STANDARD_EFFORTS,
-  },
-  {
-    id: 'gpt-5.2',
-    name: 'GPT-5.2',
-    description: 'OpenAI flagship reasoning model with extended effort support',
-    supportedReasoningEfforts: CODEX_EXTENDED_EFFORTS,
-  },
-  {
-    id: 'gpt-5.1-codex',
-    name: 'GPT-5.1 Codex',
-    description: 'Coding-optimized model for agent workflows',
-    supportedReasoningEfforts: CODEX_STANDARD_EFFORTS,
-  },
-  {
-    id: 'gpt-5.1-codex-max',
-    name: 'GPT-5.1 Codex Max',
-    description: 'Highest quality coding model with extended effort support',
-    supportedReasoningEfforts: CODEX_EXTENDED_EFFORTS,
-  },
-  {
-    id: 'gpt-5.1-codex-mini',
-    name: 'GPT-5.1 Codex Mini',
-    description: 'Fast, cost-efficient coding model',
-    supportedReasoningEfforts: CODEX_STANDARD_EFFORTS,
-  },
-];
-
-export const CODEX_DEFAULT_MODEL = 'gpt-5.1';
-
-// Codex model alias normalization
-const CODEX_ALIAS_MAP: Record<string, string> = {
-  gpt5: 'gpt-5.1',
-  gpt_5: 'gpt-5.1',
-  'gpt-5': 'gpt-5.1',
-  'gpt-5.0': 'gpt-5.1',
-};
-
-const CODEX_KNOWN_IDS = new Set(CODEX_MODELS.map((model) => model.id));
-
-/**
- * Normalize a Codex model ID, handling aliases and falling back to default.
- */
-export function normalizeCodexModelId(model?: string | null): string {
-  if (!model || typeof model !== 'string') {
-    return CODEX_DEFAULT_MODEL;
-  }
-
-  const trimmed = model.trim();
-  if (!trimmed) {
-    return CODEX_DEFAULT_MODEL;
-  }
-
-  const lower = trimmed.toLowerCase();
-  if (CODEX_ALIAS_MAP[lower]) {
-    return CODEX_ALIAS_MAP[lower];
-  }
-
-  if (CODEX_KNOWN_IDS.has(lower)) {
-    return lower;
-  }
-
-  // If the exact casing exists, allow it
-  if (CODEX_KNOWN_IDS.has(trimmed)) {
-    return trimmed;
-  }
-
-  return CODEX_DEFAULT_MODEL;
-}
-
-/**
- * Get supported reasoning efforts for a Codex model.
- * Returns standard efforts (low/medium/high) for unknown models.
- */
-export function getCodexReasoningEfforts(modelId?: string | null): readonly CodexReasoningEffort[] {
-  const normalized = normalizeCodexModelId(modelId);
-  const model = CODEX_MODELS.find((m) => m.id === normalized);
-  return model?.supportedReasoningEfforts ?? CODEX_STANDARD_EFFORTS;
-}
-
-/**
- * Check if a model supports xhigh reasoning effort.
- */
-export function supportsXhighEffort(modelId?: string | null): boolean {
-  const efforts = getCodexReasoningEfforts(modelId);
-  return efforts.includes('xhigh');
-}
-
-// ============================================================
 // Aggregated Definitions
 // ============================================================
 
 export const CLI_MODEL_DEFINITIONS: Record<AgentCliType, ModelDefinition[]> = {
   claude: CLAUDE_MODELS,
-  codex: CODEX_MODELS,
 };
 
 export const CLI_DEFAULT_MODELS: Record<AgentCliType, string> = {
   claude: CLAUDE_DEFAULT_MODEL,
-  codex: CODEX_DEFAULT_MODEL,
 };
 
 // ============================================================

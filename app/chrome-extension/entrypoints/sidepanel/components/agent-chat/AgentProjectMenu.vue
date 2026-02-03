@@ -129,33 +129,6 @@
       </select>
     </div>
 
-    <!-- Reasoning Effort (Codex only) -->
-    <div v-if="showReasoningEffortOption" class="px-3 py-2">
-      <div class="flex items-center gap-2">
-        <span class="text-xs w-12" :style="{ color: 'var(--ac-text-muted, #6e6e6e)' }">
-          {{ getMessage('effortLabel') }}
-        </span>
-        <select
-          :value="normalizedReasoningEffort"
-          class="flex-1 px-2 py-1 text-xs rounded"
-          :style="{
-            backgroundColor: 'var(--ac-surface-muted, #f2f0eb)',
-            border: 'var(--ac-border-width, 1px) solid var(--ac-border, #e5e5e5)',
-            color: 'var(--ac-text, #1a1a1a)',
-            borderRadius: 'var(--ac-radius-button, 8px)',
-          }"
-          @change="handleReasoningEffortChange"
-        >
-          <option v-for="effort in availableReasoningEfforts" :key="effort" :value="effort">
-            {{ effort }}
-          </option>
-        </select>
-      </div>
-      <p class="text-[10px] mt-1 ml-14" :style="{ color: 'var(--ac-text-subtle, #a8a29e)' }">
-        {{ getMessage('appliesToNewSessionsHint') }}
-      </p>
-    </div>
-
     <!-- CCR Option (Claude Code Router) - only shown when Claude CLI is selected -->
     <div v-if="showCcrOption" class="px-3 py-2 flex items-center gap-2">
       <span class="text-xs w-12" :style="{ color: 'var(--ac-text-muted, #6e6e6e)' }">
@@ -180,7 +153,7 @@
       </label>
     </div>
 
-    <!-- Chrome MCP Option - only shown when Claude or Codex CLI is selected -->
+    <!-- Chrome MCP Option - only shown when Claude CLI is selected -->
     <div v-if="showChromeMcpOption" class="px-3 py-2 flex items-center gap-2">
       <span class="text-xs w-12" :style="{ color: 'var(--ac-text-muted, #6e6e6e)' }">
         {{ getMessage('mcpLabel') }}
@@ -229,11 +202,10 @@
 
 <script lang="ts" setup>
 import { computed } from 'vue';
-import type { AgentProject, AgentEngineInfo, CodexReasoningEffort } from 'chrome-mcp-shared';
+import type { AgentProject, AgentEngineInfo } from 'chrome-mcp-shared';
 import {
   getModelsForCli,
   getDefaultModelForCli,
-  getCodexReasoningEfforts,
   type ModelDefinition,
 } from '@/common/agent-models';
 import { getMessage } from '@/utils/i18n';
@@ -244,7 +216,6 @@ const props = defineProps<{
   selectedProjectId: string;
   selectedCli: string;
   model: string;
-  reasoningEffort: CodexReasoningEffort;
   useCcr: boolean;
   enableChromeMcp: boolean;
   engines: AgentEngineInfo[];
@@ -258,7 +229,6 @@ const emit = defineEmits<{
   'project:new': [];
   'cli:update': [cli: string];
   'model:update': [model: string];
-  'reasoning-effort:update': [effort: CodexReasoningEffort];
   'ccr:update': [useCcr: boolean];
   'chrome-mcp:update': [enableChromeMcp: boolean];
   save: [];
@@ -288,36 +258,14 @@ const isModelDisabled = computed(() => {
   return !props.selectedCli || availableModels.value.length === 0;
 });
 
-// Show reasoning effort option only when Codex CLI is selected
-const showReasoningEffortOption = computed(() => {
-  return props.selectedCli === 'codex';
-});
-
-// Get available reasoning efforts based on selected model
-const availableReasoningEfforts = computed<readonly CodexReasoningEffort[]>(() => {
-  if (!showReasoningEffortOption.value) return [];
-  const effectiveModel = normalizedModel.value || getDefaultModelForCli('codex');
-  return getCodexReasoningEfforts(effectiveModel);
-});
-
-// Normalize reasoning effort value - fallback to highest supported
-const normalizedReasoningEffort = computed(() => {
-  const supported = availableReasoningEfforts.value;
-  if (supported.length === 0) return props.reasoningEffort;
-  if (supported.includes(props.reasoningEffort)) return props.reasoningEffort;
-  // Fallback to highest supported effort (last in the sorted array)
-  return supported[supported.length - 1];
-});
-
 // Show CCR option only when Claude CLI is selected
 const showCcrOption = computed(() => {
   return props.selectedCli === 'claude';
 });
 
-// Show Chrome MCP option when Claude, Codex, or Auto (empty) CLI is selected
-// Auto typically defaults to Claude, and users should be able to manage this project-level setting
+// Show Chrome MCP option when Claude or Auto (empty) CLI is selected
 const showChromeMcpOption = computed(() => {
-  return !props.selectedCli || props.selectedCli === 'claude' || props.selectedCli === 'codex';
+  return !props.selectedCli || props.selectedCli === 'claude';
 });
 
 // Handle CLI change - auto-select default model for the CLI
@@ -353,22 +301,6 @@ function handleChromeMcpChange(event: Event): void {
 function handleModelChange(event: Event): void {
   const newModel = (event.target as HTMLSelectElement).value;
   emit('model:update', newModel);
-
-  // When model changes for Codex, validate reasoning effort
-  if (props.selectedCli === 'codex') {
-    const supported = getCodexReasoningEfforts(newModel || getDefaultModelForCli('codex'));
-    if (!supported.includes(props.reasoningEffort)) {
-      // Auto-downgrade to highest supported effort
-      emit('reasoning-effort:update', supported[supported.length - 1]);
-    }
-  }
-}
-
-function handleReasoningEffortChange(event: Event): void {
-  emit(
-    'reasoning-effort:update',
-    (event.target as HTMLSelectElement).value as CodexReasoningEffort,
-  );
 }
 
 function handleSave(): void {

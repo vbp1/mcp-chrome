@@ -114,36 +114,6 @@
             </select>
           </div>
 
-          <!-- Reasoning Effort (Codex only) -->
-          <div v-if="isCodexEngine" class="space-y-2">
-            <label
-              class="text-[10px] font-bold uppercase tracking-wider"
-              :style="{ color: 'var(--ac-text-subtle, #a8a29e)' }"
-            >
-              Reasoning Effort
-            </label>
-            <select
-              v-model="localReasoningEffort"
-              class="w-full px-2 py-1.5 text-xs"
-              :style="{
-                backgroundColor: 'var(--ac-surface, #ffffff)',
-                border: 'var(--ac-border-width, 1px) solid var(--ac-border, #e5e5e5)',
-                borderRadius: 'var(--ac-radius-button, 8px)',
-                color: 'var(--ac-text, #1a1a1a)',
-              }"
-            >
-              <option v-for="effort in availableReasoningEfforts" :key="effort" :value="effort">
-                {{ effort }}
-              </option>
-            </select>
-            <p class="text-[10px]" :style="{ color: 'var(--ac-text-subtle, #a8a29e)' }">
-              Controls the reasoning depth. Higher effort = better quality but slower.
-              <span v-if="!availableReasoningEfforts.includes('xhigh')" class="block mt-1">
-                Note: xhigh is only available for gpt-5.2 and gpt-5.1-codex-max models.
-              </span>
-            </p>
-          </div>
-
           <!-- Permission Mode (Claude only) -->
           <div v-if="isClaudeEngine" class="space-y-2">
             <label
@@ -370,18 +340,8 @@
 
 <script lang="ts" setup>
 import { ref, computed, watch } from 'vue';
-import type {
-  AgentSession,
-  AgentManagementInfo,
-  AgentSystemPromptConfig,
-  CodexReasoningEffort,
-  AgentSessionOptionsConfig,
-} from 'chrome-mcp-shared';
-import {
-  getModelsForCli,
-  getCodexReasoningEfforts,
-  getDefaultModelForCli,
-} from '@/common/agent-models';
+import type { AgentSession, AgentManagementInfo, AgentSystemPromptConfig } from 'chrome-mcp-shared';
+import { getModelsForCli } from '@/common/agent-models';
 
 const props = defineProps<{
   open: boolean;
@@ -406,7 +366,6 @@ export interface SessionSettings {
 // Local state
 const localModel = ref('');
 const localPermissionMode = ref('');
-const localReasoningEffort = ref<CodexReasoningEffort>('medium');
 const localUseCustomPrompt = ref(false);
 const localCustomPrompt = ref('');
 const localAppendToPrompt = ref(false);
@@ -414,22 +373,6 @@ const localPromptAppend = ref('');
 
 // Computed
 const isClaudeEngine = computed(() => props.session?.engineName === 'claude');
-const isCodexEngine = computed(() => props.session?.engineName === 'codex');
-
-// Get available reasoning efforts based on selected model
-const availableReasoningEfforts = computed<readonly CodexReasoningEffort[]>(() => {
-  if (!isCodexEngine.value) return [];
-  const effectiveModel = localModel.value || getDefaultModelForCli('codex');
-  return getCodexReasoningEfforts(effectiveModel);
-});
-
-// Normalize reasoning effort when model changes
-const normalizedReasoningEffort = computed(() => {
-  const supported = availableReasoningEfforts.value;
-  if (supported.length === 0) return localReasoningEffort.value;
-  if (supported.includes(localReasoningEffort.value)) return localReasoningEffort.value;
-  return supported[supported.length - 1]; // fallback to highest supported
-});
 
 const availableModels = computed(() => {
   if (!props.session?.engineName) return [];
@@ -443,14 +386,6 @@ watch(
     if (session) {
       localModel.value = session.model || '';
       localPermissionMode.value = session.permissionMode || '';
-
-      // Initialize reasoning effort from session's codex config
-      const codexConfig = session.optionsConfig?.codexConfig;
-      if (codexConfig?.reasoningEffort) {
-        localReasoningEffort.value = codexConfig.reasoningEffort;
-      } else {
-        localReasoningEffort.value = 'medium';
-      }
 
       // Parse system prompt config based on type
       const config = session.systemPromptConfig;
@@ -477,20 +412,9 @@ watch(
   { immediate: true },
 );
 
-// Auto-adjust reasoning effort when model changes
-watch(localModel, () => {
-  if (isCodexEngine.value) {
-    localReasoningEffort.value = normalizedReasoningEffort.value;
-  }
-});
-
 function getEngineColor(engineName: string): string {
   const colors: Record<string, string> = {
     claude: '#c87941',
-    codex: '#10a37f',
-    cursor: '#8b5cf6',
-    qwen: '#6366f1',
-    glm: '#ef4444',
   };
   return colors[engineName] || '#6b7280';
 }
@@ -522,25 +446,10 @@ function handleSave(): void {
     };
   }
 
-  // Build optionsConfig for Codex engine
-  let optionsConfig: AgentSessionOptionsConfig | undefined;
-  if (isCodexEngine.value) {
-    const existingOptions = props.session?.optionsConfig ?? {};
-    const existingCodexConfig = existingOptions.codexConfig ?? {};
-    optionsConfig = {
-      ...existingOptions,
-      codexConfig: {
-        ...existingCodexConfig,
-        reasoningEffort: normalizedReasoningEffort.value,
-      },
-    };
-  }
-
   const settings: SessionSettings = {
     model: localModel.value.trim(),
     permissionMode: localPermissionMode.value,
     systemPromptConfig,
-    optionsConfig,
   };
   emit('save', settings);
 }

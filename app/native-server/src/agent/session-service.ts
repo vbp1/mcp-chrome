@@ -44,11 +44,6 @@ export interface SessionOptionsConfig {
   enableFileCheckpointing?: boolean;
   sandbox?: Record<string, unknown>;
   env?: Record<string, string>;
-  /**
-   * Optional Codex-specific configuration overrides.
-   * Only applicable when using CodexEngine.
-   */
-  codexConfig?: Partial<import('chrome-mcp-shared').CodexEngineConfig>;
 }
 
 /**
