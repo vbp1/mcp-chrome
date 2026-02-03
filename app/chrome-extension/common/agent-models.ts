@@ -20,7 +20,7 @@ export interface ModelDefinition {
   supportedReasoningEfforts?: readonly CodexReasoningEffort[];
 }
 
-export type AgentCliType = 'claude' | 'codex' | 'cursor' | 'qwen' | 'glm';
+export type AgentCliType = 'claude' | 'codex';
 
 // ============================================================
 // Claude Models
@@ -152,86 +152,17 @@ export function supportsXhighEffort(modelId?: string | null): boolean {
 }
 
 // ============================================================
-// Cursor Models
-// ============================================================
-
-export const CURSOR_MODELS: ModelDefinition[] = [
-  {
-    id: 'auto',
-    name: 'Auto',
-    description: 'Cursor auto-selects the best model',
-  },
-  {
-    id: 'claude-sonnet-4-5-20250929',
-    name: 'Claude Sonnet 4.5',
-    description: 'Anthropic Claude via Cursor',
-    supportsImages: true,
-  },
-  {
-    id: 'gpt-4.1',
-    name: 'GPT-4.1',
-    description: 'OpenAI model via Cursor',
-  },
-];
-
-export const CURSOR_DEFAULT_MODEL = 'auto';
-
-// ============================================================
-// Qwen Models
-// ============================================================
-
-export const QWEN_MODELS: ModelDefinition[] = [
-  {
-    id: 'qwen3-coder-plus',
-    name: 'Qwen3 Coder Plus',
-    description: 'Balanced 32k context model for coding',
-  },
-  {
-    id: 'qwen3-coder-pro',
-    name: 'Qwen3 Coder Pro',
-    description: 'Larger 128k context with stronger reasoning',
-  },
-  {
-    id: 'qwen3-coder',
-    name: 'Qwen3 Coder',
-    description: 'Fast iteration model',
-  },
-];
-
-export const QWEN_DEFAULT_MODEL = 'qwen3-coder-plus';
-
-// ============================================================
-// GLM Models
-// ============================================================
-
-export const GLM_MODELS: ModelDefinition[] = [
-  {
-    id: 'glm-4.6',
-    name: 'GLM 4.6',
-    description: 'Zhipu GLM 4.6 agent runtime',
-  },
-];
-
-export const GLM_DEFAULT_MODEL = 'glm-4.6';
-
-// ============================================================
 // Aggregated Definitions
 // ============================================================
 
 export const CLI_MODEL_DEFINITIONS: Record<AgentCliType, ModelDefinition[]> = {
   claude: CLAUDE_MODELS,
   codex: CODEX_MODELS,
-  cursor: CURSOR_MODELS,
-  qwen: QWEN_MODELS,
-  glm: GLM_MODELS,
 };
 
 export const CLI_DEFAULT_MODELS: Record<AgentCliType, string> = {
   claude: CLAUDE_DEFAULT_MODEL,
   codex: CODEX_DEFAULT_MODEL,
-  cursor: CURSOR_DEFAULT_MODEL,
-  qwen: QWEN_DEFAULT_MODEL,
-  glm: GLM_DEFAULT_MODEL,
 };
 
 // ============================================================

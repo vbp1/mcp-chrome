@@ -406,12 +406,6 @@ const engineDisplayName = computed(() => {
       return 'Claude Code';
     case 'codex':
       return 'Codex';
-    case 'cursor':
-      return 'Cursor';
-    case 'qwen':
-      return 'Qwen';
-    case 'glm':
-      return 'GLM';
     default:
       return 'Agent';
   }

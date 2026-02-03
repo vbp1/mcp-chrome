@@ -234,12 +234,6 @@ const engineAbbrev = computed(() => {
       return 'CL';
     case 'codex':
       return 'CX';
-    case 'cursor':
-      return 'CR';
-    case 'qwen':
-      return 'QW';
-    case 'glm':
-      return 'GL';
     default:
       // Fallback for any unknown engine name
       return (
@@ -321,9 +315,6 @@ const engineBadgeStyle = computed(() => {
   const colors: Record<string, string> = {
     claude: '#c87941',
     codex: '#10a37f',
-    cursor: '#8b5cf6',
-    qwen: '#6366f1',
-    glm: '#ef4444',
   };
   const bg = colors[props.session.engineName] || '#6b7280';
   return {
