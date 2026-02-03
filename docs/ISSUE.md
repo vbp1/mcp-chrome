@@ -206,7 +206,7 @@
 - **日期**: 2025-09-18
 - **描述**: Invalid or missing MCP session ID for SSE
 
-#### #204 经常会打开 chrome-extension://hbdgbgagpkpjffpklnamcljpakneikee/true
+#### #204 经常会打开 chrome-extension://boikkdejnhfpdpojdjmhllpngplpnang/true
 
 - **状态**: OPEN
 - **作者**: Wouldyouplace45
