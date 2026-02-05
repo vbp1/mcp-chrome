@@ -334,5 +334,11 @@
   },
   "pagesUnit": {
     "message": "ページ"
+  },
+  "embeddingSettingsTitle": {
+    "message": "埋め込み設定"
+  },
+  "embeddingSettingsDesc": {
+    "message": "ローカルまたはクラウドの埋め込みモデルを設定"
   }
 }

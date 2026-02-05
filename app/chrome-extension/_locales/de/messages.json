@@ -442,5 +442,13 @@
   "pagesUnit": {
     "message": "Seiten",
     "description": "Seiten Zähleinheit"
+  },
+  "embeddingSettingsTitle": {
+    "message": "Embedding-Einstellungen",
+    "description": "Titel für die Embedding-Einstellungen"
+  },
+  "embeddingSettingsDesc": {
+    "message": "Lokale oder Cloud-Embedding-Modelle konfigurieren",
+    "description": "Beschreibung für die Embedding-Einstellungen"
   }
 }

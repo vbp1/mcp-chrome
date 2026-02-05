@@ -442,5 +442,13 @@
   "pagesUnit": {
     "message": "頁面",
     "description": "頁面計數單位"
+  },
+  "embeddingSettingsTitle": {
+    "message": "嵌入設定",
+    "description": "嵌入設定按鈕標題"
+  },
+  "embeddingSettingsDesc": {
+    "message": "配置本地或雲端嵌入模型",
+    "description": "嵌入設定按鈕描述"
   }
 }

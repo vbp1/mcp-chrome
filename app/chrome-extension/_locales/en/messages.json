@@ -955,5 +955,13 @@
   "workflowStatusPaused": { "message": "Paused", "description": "Workflow paused status" },
   "workflowStatusSucceeded": { "message": "Succeeded", "description": "Workflow succeeded status" },
   "workflowStatusFailed": { "message": "Failed", "description": "Workflow failed status" },
-  "workflowStatusCanceled": { "message": "Canceled", "description": "Workflow canceled status" }
+  "workflowStatusCanceled": { "message": "Canceled", "description": "Workflow canceled status" },
+  "embeddingSettingsTitle": {
+    "message": "Embedding Settings",
+    "description": "Title for the embedding settings navigation button"
+  },
+  "embeddingSettingsDesc": {
+    "message": "Configure local or cloud embedding models",
+    "description": "Description for the embedding settings navigation button"
+  }
 }

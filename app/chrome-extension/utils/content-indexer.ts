@@ -5,13 +5,9 @@
 
 import { TextChunker } from './text-chunker';
 import { VectorDatabase, getGlobalVectorDatabase } from './vector-database';
-import {
-  SemanticSimilarityEngine,
-  SemanticSimilarityEngineProxy,
-  PREDEFINED_MODELS,
-  type ModelPreset,
-} from './semantic-similarity-engine';
 import { TOOL_MESSAGE_TYPES } from '@/common/message-types';
+import type { EmbeddingProvider } from './embedding-providers';
+import { EmbeddingProviderManager } from './embedding-providers';
 
 export interface IndexingOptions {
   autoIndex?: boolean;
@@ -22,7 +18,8 @@ export interface IndexingOptions {
 export class ContentIndexer {
   private textChunker: TextChunker;
   private vectorDatabase!: VectorDatabase;
-  private semanticEngine!: SemanticSimilarityEngine | SemanticSimilarityEngineProxy;
+  private embeddingProvider!: EmbeddingProvider;
+  private embeddingManager: EmbeddingProviderManager;
   private isInitialized = false;
   private isInitializing = false;
   private initPromise: Promise<void> | null = null;
@@ -38,42 +35,19 @@ export class ContentIndexer {
     };
 
     this.textChunker = new TextChunker();
+    this.embeddingManager = EmbeddingProviderManager.getInstance();
   }
 
   /**
-   * Get current selected model configuration
+   * Get current embedding dimension from provider
    */
-  private async getCurrentModelConfig() {
+  private async getCurrentDimension(): Promise<number> {
     try {
-      const result = await chrome.storage.local.get(['selectedModel', 'selectedVersion']);
-      const selectedModel = (result.selectedModel as ModelPreset) || 'multilingual-e5-small';
-      const selectedVersion =
-        (result.selectedVersion as 'full' | 'quantized' | 'compressed') || 'quantized';
-
-      const modelInfo = PREDEFINED_MODELS[selectedModel];
-
-      return {
-        modelPreset: selectedModel,
-        modelIdentifier: modelInfo.modelIdentifier,
-        dimension: modelInfo.dimension,
-        modelVersion: selectedVersion,
-        useLocalFiles: false,
-        maxLength: 256,
-        cacheSize: 1000,
-        forceOffscreen: true,
-      };
+      const provider = await this.embeddingManager.getProvider();
+      return provider.dimension;
     } catch (error) {
-      console.error('ContentIndexer: Failed to get current model config, using default:', error);
-      return {
-        modelPreset: 'multilingual-e5-small' as const,
-        modelIdentifier: 'Xenova/multilingual-e5-small',
-        dimension: 384,
-        modelVersion: 'quantized' as const,
-        useLocalFiles: false,
-        maxLength: 256,
-        cacheSize: 1000,
-        forceOffscreen: true,
-      };
+      console.error('ContentIndexer: Failed to get dimension from provider, using default:', error);
+      return 384; // Default dimension
     }
   }
 
@@ -94,15 +68,16 @@ export class ContentIndexer {
 
   private async _doInitialize(): Promise<void> {
     try {
-      // Get current selected model configuration
-      const engineConfig = await this.getCurrentModelConfig();
+      // Get embedding provider from manager
+      this.embeddingProvider = await this.embeddingManager.getProvider();
+      const dimension = this.embeddingProvider.dimension;
 
-      // Use proxy class to reuse engine instance in offscreen
-      this.semanticEngine = new SemanticSimilarityEngineProxy(engineConfig);
-      await this.semanticEngine.initialize();
+      console.log(
+        `ContentIndexer: Initializing with provider type: ${this.embeddingProvider.type}, dimension: ${dimension}`,
+      );
 
       this.vectorDatabase = await getGlobalVectorDatabase({
-        dimension: engineConfig.dimension,
+        dimension,
         efSearch: 50,
       });
       await this.vectorDatabase.initialize();
@@ -173,7 +148,7 @@ export class ContentIndexer {
 
       for (const chunk of chunksToIndex) {
         try {
-          const embedding = await this.semanticEngine.getEmbedding(chunk.text);
+          const embedding = await this.embeddingProvider.getEmbedding(chunk.text);
           const label = await this.vectorDatabase.addDocument(
             tabId,
             tab.url!,
@@ -219,7 +194,7 @@ export class ContentIndexer {
     }
 
     try {
-      const queryEmbedding = await this.semanticEngine.getEmbedding(query);
+      const queryEmbedding = await this.embeddingProvider.getEmbedding(query);
       const results = await this.vectorDatabase.search(queryEmbedding, topK);
 
       console.log(`ContentIndexer: Found ${results.length} results for query: "${query}"`);
@@ -232,8 +207,8 @@ export class ContentIndexer {
           'ContentIndexer: Attempting to reinitialize semantic engine and retry search...',
         );
         try {
-          await this.semanticEngine.initialize();
-          const queryEmbedding = await this.semanticEngine.getEmbedding(query);
+          await this.embeddingProvider.initialize();
+          const queryEmbedding = await this.embeddingProvider.getEmbedding(query);
           const results = await this.vectorDatabase.search(queryEmbedding, topK);
 
           console.log(
@@ -274,10 +249,10 @@ export class ContentIndexer {
   }
 
   /**
-   * Check if semantic engine is ready (checks both local and global state)
+   * Check if embedding provider is ready (checks both local and global state)
    */
   public isSemanticEngineReady(): boolean {
-    return this.semanticEngine && this.semanticEngine.isInitialized;
+    return this.embeddingProvider?.isInitialized || this.embeddingManager.isInitialized;
   }
 
   /**
@@ -301,19 +276,17 @@ export class ContentIndexer {
   }
 
   /**
-   * Check if semantic engine is initializing
+   * Check if embedding provider is initializing
    */
   public isSemanticEngineInitializing(): boolean {
-    return (
-      this.isInitializing || (this.semanticEngine && (this.semanticEngine as any).isInitializing)
-    );
+    return this.isInitializing || this.embeddingManager.status === 'initializing';
   }
 
   /**
-   * Reinitialize content indexer (for model switching)
+   * Reinitialize content indexer (for provider switching)
    */
   public async reinitialize(): Promise<void> {
-    console.log('ContentIndexer: Reinitializing for model switch...');
+    console.log('ContentIndexer: Reinitializing for provider switch...');
 
     this.isInitialized = false;
     this.isInitializing = false;
@@ -325,23 +298,18 @@ export class ContentIndexer {
     console.log('ContentIndexer: Cleared indexed pages cache');
 
     try {
-      console.log('ContentIndexer: Creating new semantic engine proxy...');
-      const newEngineConfig = await this.getCurrentModelConfig();
-      console.log('ContentIndexer: New engine config:', newEngineConfig);
-
-      this.semanticEngine = new SemanticSimilarityEngineProxy(newEngineConfig);
-      console.log('ContentIndexer: New semantic engine proxy created');
-
-      await this.semanticEngine.initialize();
-      console.log('ContentIndexer: Semantic engine proxy initialization completed');
+      console.log('ContentIndexer: Getting embedding provider from manager...');
+      // EmbeddingProviderManager handles provider creation and initialization
+      this.embeddingProvider = await this.embeddingManager.getProvider();
+      console.log(
+        `ContentIndexer: Embedding provider ready. Type: ${this.embeddingProvider.type}, Dimension: ${this.embeddingProvider.dimension}`,
+      );
     } catch (error) {
-      console.error('ContentIndexer: Failed to create new semantic engine proxy:', error);
+      console.error('ContentIndexer: Failed to get embedding provider:', error);
       throw error;
     }
 
-    console.log(
-      'ContentIndexer: New semantic engine proxy is ready, proceeding with initialization',
-    );
+    console.log('ContentIndexer: Embedding provider is ready, proceeding with initialization');
 
     await this.initialize();
 

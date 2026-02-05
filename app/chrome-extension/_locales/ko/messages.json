@@ -442,5 +442,13 @@
   "pagesUnit": {
     "message": "페이지",
     "description": "페이지 수 단위"
+  },
+  "embeddingSettingsTitle": {
+    "message": "임베딩 설정",
+    "description": "임베딩 설정 버튼 제목"
+  },
+  "embeddingSettingsDesc": {
+    "message": "로컬 또는 클라우드 임베딩 모델 구성",
+    "description": "임베딩 설정 버튼 설명"
   }
 }

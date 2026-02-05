@@ -777,5 +777,10 @@
   "workflowStatusPaused": { "message": "已暂停", "description": "工作流暂停状态" },
   "workflowStatusSucceeded": { "message": "成功", "description": "工作流成功状态" },
   "workflowStatusFailed": { "message": "失败", "description": "工作流失败状态" },
-  "workflowStatusCanceled": { "message": "已取消", "description": "工作流取消状态" }
+  "workflowStatusCanceled": { "message": "已取消", "description": "工作流取消状态" },
+  "embeddingSettingsTitle": { "message": "嵌入设置", "description": "嵌入设置按钮标题" },
+  "embeddingSettingsDesc": {
+    "message": "配置本地或云端嵌入模型",
+    "description": "嵌入设置按钮描述"
+  }
 }

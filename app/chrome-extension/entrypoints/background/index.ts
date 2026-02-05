@@ -11,9 +11,50 @@ import { initWebEditorListeners } from './web-editor';
 import { initQuickPanelAgentHandler } from './quick-panel/agent-handler';
 import { initQuickPanelCommands } from './quick-panel/commands';
 import { initQuickPanelTabsHandler } from './quick-panel/tabs-handler';
+import type { EmbeddingConfig } from '@/utils/embedding-providers';
 
 // Record-Replay V3 (feature flag)
 import { bootstrapV3 } from './record-replay-v3/bootstrap';
+
+/**
+ * Migrate old embedding model selection to new EmbeddingConfig format.
+ * This ensures backward compatibility with existing installations.
+ */
+async function migrateEmbeddingConfig(): Promise<void> {
+  try {
+    const result = await chrome.storage.local.get([
+      'selectedModel',
+      'selectedVersion',
+      'embeddingConfig',
+    ]);
+
+    // Skip if already migrated
+    if (result.embeddingConfig) {
+      console.log('Background: Embedding config already migrated');
+      return;
+    }
+
+    // Check if there's old config to migrate
+    if (!result.selectedModel) {
+      console.log('Background: No old embedding config found, skipping migration');
+      return;
+    }
+
+    // Migrate from old format to new EmbeddingConfig
+    const newConfig: EmbeddingConfig = {
+      providerType: 'local',
+      local: {
+        modelPreset: result.selectedModel,
+        modelVersion: result.selectedVersion || 'quantized',
+      },
+    };
+
+    await chrome.storage.local.set({ embeddingConfig: newConfig });
+    console.log('Background: Migrated embedding config from old format:', newConfig);
+  } catch (error) {
+    console.warn('Background: Failed to migrate embedding config:', error);
+  }
+}
 
 /**
  * Feature flag for RR-V3
@@ -34,6 +75,11 @@ export default defineBackground(() => {
         url: chrome.runtime.getURL('/welcome.html'),
       });
     }
+  });
+
+  // Migrate old embedding config format to new format
+  migrateEmbeddingConfig().catch((error) => {
+    console.warn('Background: Embedding config migration failed:', error);
   });
 
   // Initialize core services

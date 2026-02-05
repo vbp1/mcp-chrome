@@ -3,6 +3,8 @@ import { OffscreenManager } from '@/utils/offscreen-manager';
 import { BACKGROUND_MESSAGE_TYPES, OFFSCREEN_MESSAGE_TYPES } from '@/common/message-types';
 import { STORAGE_KEYS, ERROR_MESSAGES } from '@/common/constants';
 import { hasAnyModelCache } from '@/utils/semantic-similarity-engine';
+import type { EmbeddingConfig } from '@/utils/embedding-providers';
+import { EmbeddingProviderManager } from '@/utils/embedding-providers';
 
 /**
  * Model configuration state management interface
@@ -16,24 +18,78 @@ interface ModelConfig {
 let currentBackgroundModelConfig: ModelConfig | null = null;
 
 /**
- * Initialize semantic engine only if model cache exists
- * This is called during plugin startup to avoid downloading models unnecessarily
+ * Initialize embedding provider on startup.
+ *
+ * Flow:
+ * 1. Check if embeddingConfig exists in storage (new config format)
+ *    - If yes: use EmbeddingProviderManager to initialize the configured provider
+ * 2. If no embeddingConfig, check for local model cache (backward compatibility)
+ *    - If cache exists: initialize default local provider
+ * 3. If nothing configured: skip initialization, wait for user to configure
  */
 export async function initializeSemanticEngineIfCached(): Promise<boolean> {
   try {
-    console.log('Background: Checking if semantic engine should be initialized from cache...');
+    console.log('Background: Checking embedding provider configuration...');
 
+    // First, check if new embeddingConfig exists
+    const storageResult = await chrome.storage.local.get(['embeddingConfig']);
+    const embeddingConfig = storageResult.embeddingConfig as EmbeddingConfig | undefined;
+
+    if (embeddingConfig) {
+      console.log(
+        `Background: Found embedding config (${embeddingConfig.providerType}), initializing...`,
+      );
+
+      // For local provider, verify model files are actually cached before attempting initialization
+      if (embeddingConfig.providerType === 'local') {
+        const hasCachedModel = await hasAnyModelCache();
+        if (!hasCachedModel) {
+          console.log(
+            'Background: Local provider configured but model not cached yet, skipping initialization',
+          );
+          return false;
+        }
+      }
+
+      try {
+        const manager = EmbeddingProviderManager.getInstance();
+        await manager.initializeProvider(embeddingConfig);
+
+        // Initialize ContentIndexer
+        try {
+          const { getGlobalContentIndexer } = await import('@/utils/content-indexer');
+          const contentIndexer = getGlobalContentIndexer();
+          contentIndexer.startSemanticEngineInitialization();
+          console.log('Background: ContentIndexer initialization triggered');
+        } catch (indexerError) {
+          console.warn('Background: Failed to initialize ContentIndexer:', indexerError);
+        }
+
+        await updateModelStatus('ready', 100);
+        return true;
+      } catch (error) {
+        console.error('Background: Failed to initialize embedding provider:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        await updateModelStatus('error', 0, errorMessage, 'unknown');
+        return false;
+      }
+    }
+
+    // Backward compatibility: check for local model cache
     const hasCachedModel = await hasAnyModelCache();
     if (!hasCachedModel) {
-      console.log('Background: No cached models found, skipping semantic engine initialization');
+      console.log(
+        'Background: No embedding config or cached models found, skipping initialization',
+      );
       return false;
     }
 
-    console.log('Background: Found cached models, initializing semantic engine...');
+    // Initialize with default local provider (legacy path)
+    console.log('Background: Found cached local models, initializing default local provider...');
     await initializeDefaultSemanticEngine();
     return true;
   } catch (error) {
-    console.error('Background: Error during conditional semantic engine initialization:', error);
+    console.error('Background: Error during embedding provider initialization:', error);
     return false;
   }
 }
@@ -368,6 +424,110 @@ export const initSemanticSimilarityListener = () => {
         .then(() => sendResponse({ success: true }))
         .catch((error: any) => sendResponse({ success: false, error: error.message }));
       return true;
+    } else if (message.type === BACKGROUND_MESSAGE_TYPES.GET_EMBEDDING_CONFIG) {
+      handleGetEmbeddingConfig()
+        .then((result) => sendResponse(result))
+        .catch((error: any) => sendResponse({ success: false, error: error.message }));
+      return true;
+    } else if (message.type === BACKGROUND_MESSAGE_TYPES.SET_EMBEDDING_CONFIG) {
+      handleSetEmbeddingConfig(message.config)
+        .then((result) => sendResponse(result))
+        .catch((error: any) => sendResponse({ success: false, error: error.message }));
+      return true;
+    } else if (message.type === BACKGROUND_MESSAGE_TYPES.TEST_EMBEDDING_PROVIDER) {
+      handleTestEmbeddingProvider(message.config)
+        .then((result) => sendResponse(result))
+        .catch((error: any) => sendResponse({ success: false, error: error.message }));
+      return true;
     }
   });
 };
+
+// ============================================================
+// Embedding Provider Configuration Handlers
+// ============================================================
+
+/**
+ * Get current embedding configuration
+ */
+export async function handleGetEmbeddingConfig(): Promise<{
+  success: boolean;
+  config?: EmbeddingConfig;
+  state?: { status: string; dimension?: number; error?: string };
+  error?: string;
+}> {
+  try {
+    const manager = EmbeddingProviderManager.getInstance();
+    const config = await manager.loadConfig();
+    const state = manager.getState();
+
+    return {
+      success: true,
+      config,
+      state: {
+        status: state.status,
+        dimension: state.dimension,
+        error: state.error,
+      },
+    };
+  } catch (error: any) {
+    console.error('Background: Failed to get embedding config:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Set embedding configuration and reinitialize provider
+ */
+export async function handleSetEmbeddingConfig(config: EmbeddingConfig): Promise<{
+  success: boolean;
+  dimension?: number;
+  error?: string;
+}> {
+  try {
+    console.log('Background: Setting embedding config:', config.providerType);
+
+    const manager = EmbeddingProviderManager.getInstance();
+    await manager.initializeProvider(config);
+
+    // Reinitialize ContentIndexer if needed
+    try {
+      const { getGlobalContentIndexer } = await import('@/utils/content-indexer');
+      const contentIndexer = getGlobalContentIndexer();
+      await contentIndexer.reinitialize();
+      console.log('Background: ContentIndexer reinitialized after embedding config change');
+    } catch (indexerError) {
+      console.warn('Background: Failed to reinitialize ContentIndexer:', indexerError);
+      // Don't fail the whole operation if ContentIndexer fails
+    }
+
+    return {
+      success: true,
+      dimension: manager.currentDimension ?? undefined,
+    };
+  } catch (error: any) {
+    console.error('Background: Failed to set embedding config:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Test embedding provider configuration without saving
+ */
+export async function handleTestEmbeddingProvider(config: EmbeddingConfig): Promise<{
+  success: boolean;
+  dimension?: number;
+  error?: string;
+}> {
+  try {
+    console.log('Background: Testing embedding provider:', config.providerType);
+
+    const manager = EmbeddingProviderManager.getInstance();
+    const result = await manager.testProvider(config);
+
+    return result;
+  } catch (error: any) {
+    console.error('Background: Failed to test embedding provider:', error);
+    return { success: false, error: error.message };
+  }
+}

@@ -23,6 +23,10 @@ export const BACKGROUND_MESSAGE_TYPES = {
   REFRESH_SERVER_STATUS: 'refresh_server_status',
   SERVER_STATUS_CHANGED: 'server_status_changed',
   INITIALIZE_SEMANTIC_ENGINE: 'initialize_semantic_engine',
+  // Embedding provider management
+  GET_EMBEDDING_CONFIG: 'get_embedding_config',
+  SET_EMBEDDING_CONFIG: 'set_embedding_config',
+  TEST_EMBEDDING_PROVIDER: 'test_embedding_provider',
   // Record & Replay background control and queries
   RR_START_RECORDING: 'rr_start_recording',
   RR_STOP_RECORDING: 'rr_stop_recording',

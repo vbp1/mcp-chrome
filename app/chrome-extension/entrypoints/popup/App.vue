@@ -154,14 +154,14 @@
                     d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
                   />
                 </svg>
-                <!-- Workflow icon -->
-                <WorkflowIcon v-else-if="entry.id === 'workflow'" />
                 <!-- Edit icon -->
                 <EditIcon v-else-if="entry.id === 'edit'" />
                 <!-- Marker icon -->
                 <MarkerIcon v-else-if="entry.id === 'marker'" />
                 <!-- Markers Library icon -->
                 <ClipboardListIcon v-else-if="entry.id === 'markers-library'" />
+                <!-- Embeddings icon -->
+                <EmbeddingsIcon v-else-if="entry.id === 'embeddings'" />
                 <!-- Settings icon -->
                 <svg
                   v-else-if="entry.id === 'settings'"
@@ -200,14 +200,14 @@
                     d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
                   />
                 </svg>
-                <!-- Workflow icon -->
-                <WorkflowIcon v-else-if="activeEntryData.id === 'workflow'" />
                 <!-- Edit icon -->
                 <EditIcon v-else-if="activeEntryData.id === 'edit'" />
                 <!-- Marker icon -->
                 <MarkerIcon v-else-if="activeEntryData.id === 'marker'" />
                 <!-- Markers Library icon -->
                 <ClipboardListIcon v-else-if="activeEntryData.id === 'markers-library'" />
+                <!-- Embeddings icon -->
+                <EmbeddingsIcon v-else-if="activeEntryData.id === 'embeddings'" />
                 <!-- Settings icon -->
                 <svg
                   v-else-if="activeEntryData.id === 'settings'"
@@ -364,10 +364,9 @@ import {
   TrashIcon,
   CheckIcon,
   TabIcon,
-  VectorIcon,
+  EmbeddingsIcon,
   RecordIcon,
   StopIcon,
-  WorkflowIcon,
   RefreshIcon,
   EditIcon,
   MarkerIcon,
@@ -560,15 +559,6 @@ const managementEntries = computed(() => [
     comingSoon: false,
   },
   {
-    id: 'workflow',
-    title: getMessage('workflowManagementTitle'),
-    desc: getMessage('workflowManagementDesc'),
-    iconClass: 'workflow',
-    btnClass: 'rr-icon-btn-workflow',
-    action: () => openWorkflowSidepanel(),
-    comingSoon: true,
-  },
-  {
     id: 'edit',
     title: getMessage('webEditorTooltip'),
     desc: getMessage('webEditorDesc'),
@@ -593,6 +583,15 @@ const managementEntries = computed(() => [
     iconClass: 'markers-library',
     btnClass: 'rr-icon-btn-markers-library',
     action: () => openElementMarkerSidepanel(),
+    comingSoon: false,
+  },
+  {
+    id: 'embeddings',
+    title: getMessage('embeddingSettingsTitle') || 'Embedding Settings',
+    desc: getMessage('embeddingSettingsDesc') || 'Configure local or cloud embedding models',
+    iconClass: 'embeddings',
+    btnClass: 'rr-icon-btn-embeddings',
+    action: () => openEmbeddingSettingsSidepanel(),
     comingSoon: false,
   },
   {
@@ -719,13 +718,6 @@ async function openSidepanelAndClose(tab: string) {
   }
 }
 
-// Open sidepanel from popup for workflow management
-function openWorkflowSidepanel() {
-  // TODO: Workflow feature coming soon
-  showComingSoonToast(getMessage('workflowFeatureName'));
-  // openSidepanelAndClose('workflows');
-}
-
 // Open sidepanel for element marker management
 function openElementMarkerSidepanel() {
   openSidepanelAndClose('element-markers');
@@ -734,6 +726,10 @@ function openElementMarkerSidepanel() {
 // Open sidepanel for agent chat
 function openAgentSidepanel() {
   openSidepanelAndClose('agent-chat');
+}
+
+function openEmbeddingSettingsSidepanel() {
+  openSidepanelAndClose('embedding-settings');
 }
 
 async function toggleWebEditor() {

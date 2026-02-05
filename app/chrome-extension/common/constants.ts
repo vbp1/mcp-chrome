@@ -223,6 +223,7 @@ export const STORAGE_KEYS = {
   NATIVE_SERVER_PORT: 'nativeServerPort',
   NATIVE_AUTO_CONNECT_ENABLED: 'nativeAutoConnectEnabled',
   SEMANTIC_MODEL: 'selectedModel',
+  EMBEDDING_CONFIG: 'embeddingConfig',
   USER_PREFERENCES: 'userPreferences',
   VECTOR_INDEX: 'vectorIndex',
   USERSCRIPTS: 'userscripts',
