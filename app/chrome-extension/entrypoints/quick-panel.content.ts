@@ -103,8 +103,8 @@ export default defineContentScript({
     // Register message listener
     chrome.runtime.onMessage.addListener(handleMessage);
 
-    // Cleanup on page unload
-    window.addEventListener('unload', () => {
+    // Cleanup on page unload (use pagehide to avoid Permissions Policy violation)
+    window.addEventListener('pagehide', () => {
       // Extension context may be invalidated during page unload (MV3)
       if (chrome.runtime?.onMessage) {
         chrome.runtime.onMessage.removeListener(handleMessage);
