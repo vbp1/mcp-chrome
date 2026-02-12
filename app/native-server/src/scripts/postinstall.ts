@@ -4,7 +4,12 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { COMMAND_NAME } from './constant';
-import { colorText, tryRegisterUserLevelHost, writeNodePathFile } from './utils';
+import {
+  colorText,
+  ensureBetterSqlite3,
+  tryRegisterUserLevelHost,
+  writeNodePathFile,
+} from './utils';
 
 // Check if this script is run directly
 const isDirectRun = require.main === module;
@@ -289,6 +294,9 @@ async function main(): Promise<void> {
   console.log(`  PNPM_HOME: ${process.env.PNPM_HOME}`);
   console.log(`  npm_config_prefix: ${process.env.npm_config_prefix}`);
   console.log(`  isGlobalInstall: ${isGlobalInstall}`);
+
+  // Ensure better-sqlite3 native binding is available
+  await ensureBetterSqlite3();
 
   // Always ensure execution permissions first
   await ensureExecutionPermissions();
