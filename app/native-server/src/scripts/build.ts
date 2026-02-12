@@ -1,6 +1,7 @@
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import { ensureBetterSqlite3 } from './utils';
 
 const distDir = path.join(__dirname, '..', '..', 'dist');
 // 清理上次构建
@@ -126,4 +127,14 @@ const nodePathFile = path.join(distDir, 'node_path.txt');
 fs.writeFileSync(nodePathFile, process.execPath, 'utf8');
 console.log(`已写入 Node.js 路径: ${process.execPath}`);
 
-console.log('✅ 构建完成');
+// Ensure better-sqlite3 native binding is compiled for the current Node.js version.
+// This is needed because `pnpm install` may skip postinstall when dist/ doesn't exist yet.
+ensureBetterSqlite3()
+  .then(() => {
+    console.log('✅ 构建完成');
+  })
+  .catch((err) => {
+    console.error('⚠️ better-sqlite3 rebuild failed:', err);
+    console.log('✅ 构建完成 (without better-sqlite3 native binding)');
+    process.exitCode = 1;
+  });

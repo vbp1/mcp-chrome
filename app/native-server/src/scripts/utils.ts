@@ -614,7 +614,30 @@ export async function ensureBetterSqlite3(): Promise<void> {
       fs.rmSync(buildDir, { recursive: true, force: true });
     }
 
-    // Run npm run build-release in the better-sqlite3 directory
+    // First try prebuild-install to download prebuilt binaries (no C++ compiler needed).
+    // Falls back to node-gyp rebuild if prebuilt binaries are not available.
+    // Resolve the prebuild-install binary via Node module resolution to work with pnpm.
+    let prebuildResult: ReturnType<typeof spawnSync> = { status: 1 } as any;
+    try {
+      const prebuildBin = require.resolve('prebuild-install/bin', { paths: [packageDir] });
+      prebuildResult = spawnSync(process.execPath, [prebuildBin], {
+        cwd: packageDir,
+        stdio: 'inherit',
+        timeout: 120000, // 2 minutes timeout
+      });
+    } catch {
+      console.log(colorText('prebuild-install not found, skipping prebuilt download', 'yellow'));
+    }
+
+    if (prebuildResult.status === 0 && betterSqlite3BindingExists(packageDir)) {
+      console.log(colorText('✓ better-sqlite3 prebuilt binary installed successfully', 'green'));
+      return;
+    }
+
+    console.log(
+      colorText('Prebuilt binary not available, falling back to node-gyp rebuild...', 'yellow'),
+    );
+
     const result = spawnSync('npm', ['run', 'build-release'], {
       cwd: packageDir,
       stdio: 'inherit',
