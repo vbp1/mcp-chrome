@@ -160,8 +160,6 @@
                 <MarkerIcon v-else-if="entry.id === 'marker'" />
                 <!-- Markers Library icon -->
                 <ClipboardListIcon v-else-if="entry.id === 'markers-library'" />
-                <!-- Embeddings icon -->
-                <EmbeddingsIcon v-else-if="entry.id === 'embeddings'" />
                 <!-- Settings icon -->
                 <svg
                   v-else-if="entry.id === 'settings'"
@@ -206,8 +204,6 @@
                 <MarkerIcon v-else-if="activeEntryData.id === 'marker'" />
                 <!-- Markers Library icon -->
                 <ClipboardListIcon v-else-if="activeEntryData.id === 'markers-library'" />
-                <!-- Embeddings icon -->
-                <EmbeddingsIcon v-else-if="activeEntryData.id === 'embeddings'" />
                 <!-- Settings icon -->
                 <svg
                   v-else-if="activeEntryData.id === 'settings'"
@@ -269,54 +265,6 @@
       </div>
     </div>
 
-    <!-- 本地模型二级页面 -->
-    <LocalModelPage
-      v-show="currentView === 'local-model'"
-      :semantic-engine-status="semanticEngineStatus"
-      :is-semantic-engine-initializing="isSemanticEngineInitializing"
-      :semantic-engine-init-progress="semanticEngineInitProgress"
-      :semantic-engine-last-updated="semanticEngineLastUpdated"
-      :available-models="availableModels"
-      :current-model="currentModel"
-      :is-model-switching="isModelSwitching"
-      :is-model-downloading="isModelDownloading"
-      :model-download-progress="modelDownloadProgress"
-      :model-initialization-status="modelInitializationStatus"
-      :model-error-message="modelErrorMessage"
-      :model-error-type="modelErrorType"
-      :storage-stats="storageStats"
-      :is-clearing-data="isClearingData"
-      :clear-data-progress="clearDataProgress"
-      :cache-stats="cacheStats"
-      :is-managing-cache="isManagingCache"
-      @back="currentView = 'home'"
-      @initialize-semantic-engine="initializeSemanticEngine"
-      @switch-model="switchModel"
-      @retry-model-initialization="retryModelInitialization"
-      @show-clear-confirmation="showClearConfirmation = true"
-      @cleanup-cache="cleanupCache"
-      @clear-all-cache="clearAllCache"
-    />
-
-    <ConfirmDialog
-      :visible="showClearConfirmation"
-      :title="getMessage('confirmClearDataTitle')"
-      :message="getMessage('clearDataWarningMessage')"
-      :items="[
-        getMessage('clearDataList1'),
-        getMessage('clearDataList2'),
-        getMessage('clearDataList3'),
-      ]"
-      :warning="getMessage('clearDataIrreversibleWarning')"
-      icon="⚠️"
-      :confirm-text="getMessage('confirmClearButton')"
-      :cancel-text="getMessage('cancelButton')"
-      :confirming-text="getMessage('clearingStatus')"
-      :is-confirming="isClearingData"
-      @confirm="confirmClearAllData"
-      @cancel="hideClearDataConfirmation"
-    />
-
     <!-- 侧边栏承担工作流管理；编辑器在独立窗口中打开 -->
 
     <!-- Coming Soon Toast -->
@@ -340,23 +288,11 @@
 
 <script lang="ts" setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue';
-import {
-  PREDEFINED_MODELS,
-  type ModelPreset,
-  getModelInfo,
-  getCacheStats,
-  clearModelCache,
-  cleanupModelCache,
-} from '@/utils/semantic-similarity-engine';
 import { BACKGROUND_MESSAGE_TYPES } from '@/common/message-types';
 import { LINKS } from '@/common/constants';
 import { getMessage } from '@/utils/i18n';
 import { useAgentTheme, type AgentThemeId } from '../sidepanel/composables/useAgentTheme';
 
-import ConfirmDialog from './components/ConfirmDialog.vue';
-import ProgressIndicator from './components/ProgressIndicator.vue';
-import ModelCacheManagement from './components/ModelCacheManagement.vue';
-import LocalModelPage from './components/LocalModelPage.vue';
 import {
   DocumentIcon,
   ClipboardListIcon,
@@ -364,7 +300,6 @@ import {
   TrashIcon,
   CheckIcon,
   TabIcon,
-  EmbeddingsIcon,
   RecordIcon,
   StopIcon,
   RefreshIcon,
@@ -375,8 +310,8 @@ import {
 // AgentChat theme - 从preload中获取，保持与sidepanel一致
 const { theme: agentTheme, initTheme } = useAgentTheme();
 
-// 当前视图状态：首页 or 本地模型页
-const currentView = ref<'home' | 'local-model'>('home');
+// 当前视图状态
+const currentView = ref<'home'>('home');
 
 // Coming Soon Toast
 const comingSoonToast = ref<{ show: boolean; feature: string }>({ show: false, feature: '' });
@@ -586,15 +521,6 @@ const managementEntries = computed(() => [
     comingSoon: false,
   },
   {
-    id: 'embeddings',
-    title: getMessage('embeddingSettingsTitle') || 'Embedding Settings',
-    desc: getMessage('embeddingSettingsDesc') || 'Configure local or cloud embedding models',
-    iconClass: 'embeddings',
-    btnClass: 'rr-icon-btn-embeddings',
-    action: () => openEmbeddingSettingsSidepanel(),
-    comingSoon: false,
-  },
-  {
     id: 'settings',
     title: getMessage('serverSettingsTitle'),
     desc: getMessage('serverSettingsDesc'),
@@ -628,60 +554,6 @@ const mcpConfigJson = computed(() => {
     },
   };
   return JSON.stringify(config, null, 2);
-});
-
-const currentModel = ref<ModelPreset | null>(null);
-const isModelSwitching = ref(false);
-const modelSwitchProgress = ref('');
-
-const modelDownloadProgress = ref<number>(0);
-const isModelDownloading = ref(false);
-const modelInitializationStatus = ref<'idle' | 'downloading' | 'initializing' | 'ready' | 'error'>(
-  'idle',
-);
-const modelErrorMessage = ref<string>('');
-const modelErrorType = ref<'network' | 'file' | 'unknown' | ''>('');
-
-const selectedVersion = ref<'quantized'>('quantized');
-
-const storageStats = ref<{
-  indexedPages: number;
-  totalDocuments: number;
-  totalTabs: number;
-  indexSize: number;
-  isInitialized: boolean;
-} | null>(null);
-const isRefreshingStats = ref(false);
-const isClearingData = ref(false);
-const showClearConfirmation = ref(false);
-const clearDataProgress = ref('');
-
-const semanticEngineStatus = ref<'idle' | 'initializing' | 'ready' | 'error'>('idle');
-const isSemanticEngineInitializing = ref(false);
-const semanticEngineInitProgress = ref('');
-const semanticEngineLastUpdated = ref<number | null>(null);
-
-// Cache management
-const isManagingCache = ref(false);
-const cacheStats = ref<{
-  totalSize: number;
-  totalSizeMB: number;
-  entryCount: number;
-  entries: Array<{
-    url: string;
-    size: number;
-    sizeMB: number;
-    timestamp: number;
-    age: string;
-    expired: boolean;
-  }>;
-} | null>(null);
-
-const availableModels = computed(() => {
-  return Object.entries(PREDEFINED_MODELS).map(([key, value]) => ({
-    preset: key as ModelPreset,
-    ...value,
-  }));
 });
 
 const getStatusClass = () => {
@@ -726,10 +598,6 @@ function openElementMarkerSidepanel() {
 // Open sidepanel for agent chat
 function openAgentSidepanel() {
   openSidepanelAndClose('agent-chat');
-}
-
-function openEmbeddingSettingsSidepanel() {
-  openSidepanelAndClose('embedding-settings');
 }
 
 async function toggleWebEditor() {
@@ -796,274 +664,6 @@ const getStatusText = () => {
   } else {
     return getMessage('detectingStatus');
   }
-};
-
-const formatIndexSize = () => {
-  if (!storageStats.value?.indexSize) return '0 MB';
-  const sizeInMB = Math.round(storageStats.value.indexSize / (1024 * 1024));
-  return `${sizeInMB} MB`;
-};
-
-const getModelDescription = (model: any) => {
-  switch (model.preset) {
-    case 'multilingual-e5-small':
-      return getMessage('lightweightModelDescription');
-    case 'multilingual-e5-base':
-      return getMessage('betterThanSmallDescription');
-    default:
-      return getMessage('multilingualModelDescription');
-  }
-};
-
-const getPerformanceText = (performance: string) => {
-  switch (performance) {
-    case 'fast':
-      return getMessage('fastPerformance');
-    case 'balanced':
-      return getMessage('balancedPerformance');
-    case 'accurate':
-      return getMessage('accuratePerformance');
-    default:
-      return performance;
-  }
-};
-
-const getSemanticEngineStatusText = () => {
-  switch (semanticEngineStatus.value) {
-    case 'ready':
-      return getMessage('semanticEngineReadyStatus');
-    case 'initializing':
-      return getMessage('semanticEngineInitializingStatus');
-    case 'error':
-      return getMessage('semanticEngineInitFailedStatus');
-    case 'idle':
-    default:
-      return getMessage('semanticEngineNotInitStatus');
-  }
-};
-
-const getSemanticEngineStatusClass = () => {
-  switch (semanticEngineStatus.value) {
-    case 'ready':
-      return 'bg-emerald-500';
-    case 'initializing':
-      return 'bg-yellow-500';
-    case 'error':
-      return 'bg-red-500';
-    case 'idle':
-    default:
-      return 'bg-gray-500';
-  }
-};
-
-const getActiveTabsCount = () => {
-  return storageStats.value?.totalTabs || 0;
-};
-
-const getProgressText = () => {
-  if (isModelDownloading.value) {
-    return getMessage('downloadingModelStatus', [modelDownloadProgress.value.toString()]);
-  } else if (isModelSwitching.value) {
-    return modelSwitchProgress.value || getMessage('switchingModelStatus');
-  }
-  return '';
-};
-
-const getErrorTypeText = () => {
-  switch (modelErrorType.value) {
-    case 'network':
-      return getMessage('networkErrorMessage');
-    case 'file':
-      return getMessage('modelCorruptedErrorMessage');
-    case 'unknown':
-    default:
-      return getMessage('unknownErrorMessage');
-  }
-};
-
-const getSemanticEngineButtonText = () => {
-  switch (semanticEngineStatus.value) {
-    case 'ready':
-      return getMessage('reinitializeButton');
-    case 'initializing':
-      return getMessage('initializingStatus');
-    case 'error':
-      return getMessage('reinitializeButton');
-    case 'idle':
-    default:
-      return getMessage('initSemanticEngineButton');
-  }
-};
-
-const loadCacheStats = async () => {
-  try {
-    cacheStats.value = await getCacheStats();
-  } catch (error) {
-    console.error('Failed to get cache stats:', error);
-    cacheStats.value = null;
-  }
-};
-
-const cleanupCache = async () => {
-  if (isManagingCache.value) return;
-
-  isManagingCache.value = true;
-  try {
-    await cleanupModelCache();
-    // Refresh cache stats
-    await loadCacheStats();
-  } catch (error) {
-    console.error('Failed to cleanup cache:', error);
-  } finally {
-    isManagingCache.value = false;
-  }
-};
-
-const clearAllCache = async () => {
-  if (isManagingCache.value) return;
-
-  isManagingCache.value = true;
-  try {
-    await clearModelCache();
-    // Refresh cache stats
-    await loadCacheStats();
-  } catch (error) {
-    console.error('Failed to clear cache:', error);
-  } finally {
-    isManagingCache.value = false;
-  }
-};
-
-const saveSemanticEngineState = async () => {
-  try {
-    const semanticEngineState = {
-      status: semanticEngineStatus.value,
-      lastUpdated: semanticEngineLastUpdated.value,
-    };
-    // eslint-disable-next-line no-undef
-    await chrome.storage.local.set({ semanticEngineState });
-  } catch (error) {
-    console.error('保存语义引擎状态失败:', error);
-  }
-};
-
-const initializeSemanticEngine = async () => {
-  if (isSemanticEngineInitializing.value) return;
-
-  const isReinitialization = semanticEngineStatus.value === 'ready';
-  console.log(
-    `🚀 User triggered semantic engine ${isReinitialization ? 'reinitialization' : 'initialization'}`,
-  );
-
-  isSemanticEngineInitializing.value = true;
-  semanticEngineStatus.value = 'initializing';
-  semanticEngineInitProgress.value = isReinitialization
-    ? getMessage('semanticEngineInitializingStatus')
-    : getMessage('semanticEngineInitializingStatus');
-  semanticEngineLastUpdated.value = Date.now();
-
-  await saveSemanticEngineState();
-
-  try {
-    // eslint-disable-next-line no-undef
-    chrome.runtime
-      .sendMessage({
-        type: BACKGROUND_MESSAGE_TYPES.INITIALIZE_SEMANTIC_ENGINE,
-      })
-      .catch((error) => {
-        console.error('❌ Error sending semantic engine initialization request:', error);
-      });
-
-    startSemanticEngineStatusPolling();
-
-    semanticEngineInitProgress.value = isReinitialization
-      ? getMessage('processingStatus')
-      : getMessage('processingStatus');
-  } catch (error: any) {
-    console.error('❌ Failed to send initialization request:', error);
-    semanticEngineStatus.value = 'error';
-    semanticEngineInitProgress.value = `Failed to send initialization request: ${error?.message || 'Unknown error'}`;
-
-    await saveSemanticEngineState();
-
-    setTimeout(() => {
-      semanticEngineInitProgress.value = '';
-    }, 5000);
-
-    isSemanticEngineInitializing.value = false;
-    semanticEngineLastUpdated.value = Date.now();
-    await saveSemanticEngineState();
-  }
-};
-
-const checkSemanticEngineStatus = async () => {
-  try {
-    // eslint-disable-next-line no-undef
-    const response = await chrome.runtime.sendMessage({
-      type: BACKGROUND_MESSAGE_TYPES.GET_MODEL_STATUS,
-    });
-
-    if (response && response.success && response.status) {
-      const status = response.status;
-
-      if (status.initializationStatus === 'ready') {
-        semanticEngineStatus.value = 'ready';
-        semanticEngineLastUpdated.value = Date.now();
-        isSemanticEngineInitializing.value = false;
-        semanticEngineInitProgress.value = getMessage('semanticEngineReadyStatus');
-        await saveSemanticEngineState();
-        stopSemanticEngineStatusPolling();
-        setTimeout(() => {
-          semanticEngineInitProgress.value = '';
-        }, 2000);
-      } else if (
-        status.initializationStatus === 'downloading' ||
-        status.initializationStatus === 'initializing'
-      ) {
-        semanticEngineStatus.value = 'initializing';
-        isSemanticEngineInitializing.value = true;
-        semanticEngineInitProgress.value = getMessage('semanticEngineInitializingStatus');
-        semanticEngineLastUpdated.value = Date.now();
-        await saveSemanticEngineState();
-      } else if (status.initializationStatus === 'error') {
-        semanticEngineStatus.value = 'error';
-        semanticEngineLastUpdated.value = Date.now();
-        isSemanticEngineInitializing.value = false;
-        semanticEngineInitProgress.value = getMessage('semanticEngineInitFailedStatus');
-        await saveSemanticEngineState();
-        stopSemanticEngineStatusPolling();
-        setTimeout(() => {
-          semanticEngineInitProgress.value = '';
-        }, 5000);
-      } else {
-        semanticEngineStatus.value = 'idle';
-        isSemanticEngineInitializing.value = false;
-        await saveSemanticEngineState();
-      }
-    } else {
-      semanticEngineStatus.value = 'idle';
-      isSemanticEngineInitializing.value = false;
-      await saveSemanticEngineState();
-    }
-  } catch (error) {
-    console.error('Popup: Failed to check semantic engine status:', error);
-    semanticEngineStatus.value = 'idle';
-    isSemanticEngineInitializing.value = false;
-    await saveSemanticEngineState();
-  }
-};
-
-const retryModelInitialization = async () => {
-  if (!currentModel.value) return;
-
-  console.log('🔄 Retrying model initialization...');
-
-  modelErrorMessage.value = '';
-  modelErrorType.value = '';
-  modelInitializationStatus.value = 'downloading';
-  modelDownloadProgress.value = 0;
-  isModelDownloading.value = true;
-  await switchModel(currentModel.value);
 };
 
 const updatePort = async (event: Event) => {
@@ -1171,98 +771,6 @@ const testNativeConnection = async () => {
   }
 };
 
-const loadModelPreference = async () => {
-  try {
-    // eslint-disable-next-line no-undef
-    const result = await chrome.storage.local.get([
-      'selectedModel',
-      'selectedVersion',
-      'modelState',
-      'semanticEngineState',
-    ]);
-
-    if (result.selectedModel) {
-      const storedModel = result.selectedModel as string;
-      console.log('📋 Stored model from storage:', storedModel);
-
-      if (PREDEFINED_MODELS[storedModel as ModelPreset]) {
-        currentModel.value = storedModel as ModelPreset;
-        console.log(`✅ Loaded valid model: ${currentModel.value}`);
-      } else {
-        console.warn(
-          `⚠️ Stored model "${storedModel}" not found in PREDEFINED_MODELS, using default`,
-        );
-        currentModel.value = 'multilingual-e5-small';
-        await saveModelPreference(currentModel.value);
-      }
-    } else {
-      console.log('⚠️ No model found in storage, using default');
-      currentModel.value = 'multilingual-e5-small';
-      await saveModelPreference(currentModel.value);
-    }
-
-    selectedVersion.value = 'quantized';
-    console.log('✅ Using quantized version (fixed)');
-
-    await saveVersionPreference('quantized');
-
-    if (result.modelState) {
-      const modelState = result.modelState;
-
-      if (modelState.status === 'ready') {
-        modelInitializationStatus.value = 'ready';
-        modelDownloadProgress.value = modelState.downloadProgress || 100;
-        isModelDownloading.value = false;
-      } else {
-        modelInitializationStatus.value = 'idle';
-        modelDownloadProgress.value = 0;
-        isModelDownloading.value = false;
-
-        await saveModelState();
-      }
-    } else {
-      modelInitializationStatus.value = 'idle';
-      modelDownloadProgress.value = 0;
-      isModelDownloading.value = false;
-    }
-
-    if (result.semanticEngineState) {
-      const semanticState = result.semanticEngineState;
-      if (semanticState.status === 'ready') {
-        semanticEngineStatus.value = 'ready';
-        semanticEngineLastUpdated.value = semanticState.lastUpdated || Date.now();
-      } else if (semanticState.status === 'error') {
-        semanticEngineStatus.value = 'error';
-        semanticEngineLastUpdated.value = semanticState.lastUpdated || Date.now();
-      } else {
-        semanticEngineStatus.value = 'idle';
-      }
-    } else {
-      semanticEngineStatus.value = 'idle';
-    }
-  } catch (error) {
-    console.error('❌ 加载模型偏好失败:', error);
-  }
-};
-
-const saveModelPreference = async (model: ModelPreset) => {
-  try {
-    // eslint-disable-next-line no-undef
-    await chrome.storage.local.set({ selectedModel: model });
-  } catch (error) {
-    console.error('保存模型偏好失败:', error);
-  }
-};
-
-const saveVersionPreference = async (version: 'full' | 'quantized' | 'compressed') => {
-  try {
-    // eslint-disable-next-line no-undef
-    await chrome.storage.local.set({ selectedVersion: version });
-  } catch (error) {
-    console.error('保存版本偏好失败:', error);
-  }
-};
-
 const savePortPreference = async (port: number) => {
   try {
     // eslint-disable-next-line no-undef
@@ -1283,297 +791,6 @@ const loadPortPreference = async () => {
     }
   } catch (error) {
     console.error('加载端口偏好失败:', error);
-  }
-};
-
-const saveModelState = async () => {
-  try {
-    const modelState = {
-      status: modelInitializationStatus.value,
-      downloadProgress: modelDownloadProgress.value,
-      isDownloading: isModelDownloading.value,
-      lastUpdated: Date.now(),
-    };
-    // eslint-disable-next-line no-undef
-    await chrome.storage.local.set({ modelState });
-  } catch (error) {
-    console.error('保存模型状态失败:', error);
-  }
-};
-
-let statusMonitoringInterval: ReturnType<typeof setInterval> | null = null;
-let semanticEngineStatusPollingInterval: ReturnType<typeof setInterval> | null = null;
-
-const startModelStatusMonitoring = () => {
-  if (statusMonitoringInterval) {
-    clearInterval(statusMonitoringInterval);
-  }
-
-  statusMonitoringInterval = setInterval(async () => {
-    try {
-      // eslint-disable-next-line no-undef
-      const response = await chrome.runtime.sendMessage({
-        type: 'get_model_status',
-      });
-
-      if (response && response.success) {
-        const status = response.status;
-        modelInitializationStatus.value = status.initializationStatus || 'idle';
-        modelDownloadProgress.value = status.downloadProgress || 0;
-        isModelDownloading.value = status.isDownloading || false;
-
-        if (status.initializationStatus === 'error') {
-          modelErrorMessage.value = status.errorMessage || getMessage('modelFailedStatus');
-          modelErrorType.value = status.errorType || 'unknown';
-        } else {
-          modelErrorMessage.value = '';
-          modelErrorType.value = '';
-        }
-
-        await saveModelState();
-
-        if (status.initializationStatus === 'ready' || status.initializationStatus === 'error') {
-          stopModelStatusMonitoring();
-        }
-      }
-    } catch (error) {
-      console.error('获取模型状态失败:', error);
-    }
-  }, 1000);
-};
-
-const stopModelStatusMonitoring = () => {
-  if (statusMonitoringInterval) {
-    clearInterval(statusMonitoringInterval);
-    statusMonitoringInterval = null;
-  }
-};
-
-const startSemanticEngineStatusPolling = () => {
-  if (semanticEngineStatusPollingInterval) {
-    clearInterval(semanticEngineStatusPollingInterval);
-  }
-
-  semanticEngineStatusPollingInterval = setInterval(async () => {
-    try {
-      await checkSemanticEngineStatus();
-    } catch (error) {
-      console.error('Semantic engine status polling failed:', error);
-    }
-  }, 2000);
-};
-
-const stopSemanticEngineStatusPolling = () => {
-  if (semanticEngineStatusPollingInterval) {
-    clearInterval(semanticEngineStatusPollingInterval);
-    semanticEngineStatusPollingInterval = null;
-  }
-};
-
-const refreshStorageStats = async () => {
-  if (isRefreshingStats.value) return;
-
-  isRefreshingStats.value = true;
-  try {
-    console.log('🔄 Refreshing storage statistics...');
-
-    // eslint-disable-next-line no-undef
-    const response = await chrome.runtime.sendMessage({
-      type: 'get_storage_stats',
-    });
-
-    if (response && response.success) {
-      storageStats.value = {
-        indexedPages: response.stats.indexedPages || 0,
-        totalDocuments: response.stats.totalDocuments || 0,
-        totalTabs: response.stats.totalTabs || 0,
-        indexSize: response.stats.indexSize || 0,
-        isInitialized: response.stats.isInitialized || false,
-      };
-      console.log('✅ Storage stats refreshed:', storageStats.value);
-    } else {
-      console.error('❌ Failed to get storage stats:', response?.error);
-      storageStats.value = {
-        indexedPages: 0,
-        totalDocuments: 0,
-        totalTabs: 0,
-        indexSize: 0,
-        isInitialized: false,
-      };
-    }
-  } catch (error) {
-    console.error('❌ Error refreshing storage stats:', error);
-    storageStats.value = {
-      indexedPages: 0,
-      totalDocuments: 0,
-      totalTabs: 0,
-      indexSize: 0,
-      isInitialized: false,
-    };
-  } finally {
-    isRefreshingStats.value = false;
-  }
-};
-
-const hideClearDataConfirmation = () => {
-  showClearConfirmation.value = false;
-};
-
-const confirmClearAllData = async () => {
-  if (isClearingData.value) return;
-
-  isClearingData.value = true;
-  clearDataProgress.value = getMessage('clearingStatus');
-
-  try {
-    console.log('🗑️ Starting to clear all data...');
-
-    // eslint-disable-next-line no-undef
-    const response = await chrome.runtime.sendMessage({
-      type: 'clear_all_data',
-    });
-
-    if (response && response.success) {
-      clearDataProgress.value = getMessage('dataClearedNotification');
-      console.log('✅ All data cleared successfully');
-
-      await refreshStorageStats();
-
-      setTimeout(() => {
-        clearDataProgress.value = '';
-        hideClearDataConfirmation();
-      }, 2000);
-    } else {
-      throw new Error(response?.error || 'Failed to clear data');
-    }
-  } catch (error: any) {
-    console.error('❌ Failed to clear all data:', error);
-    clearDataProgress.value = `Failed to clear data: ${error?.message || 'Unknown error'}`;
-
-    setTimeout(() => {
-      clearDataProgress.value = '';
-    }, 5000);
-  } finally {
-    isClearingData.value = false;
-  }
-};
-
-const switchModel = async (newModel: ModelPreset) => {
-  console.log(`🔄 switchModel called with newModel: ${newModel}`);
-
-  if (isModelSwitching.value) {
-    console.log('⏸️ Model switch already in progress, skipping');
-    return;
-  }
-
-  const isSameModel = newModel === currentModel.value;
-  const currentModelInfo = currentModel.value
-    ? getModelInfo(currentModel.value)
-    : getModelInfo('multilingual-e5-small');
-  const newModelInfo = getModelInfo(newModel);
-  const isDifferentDimension = currentModelInfo.dimension !== newModelInfo.dimension;
-
-  console.log(`📊 Switch analysis:`);
-  console.log(`   - Same model: ${isSameModel} (${currentModel.value} -> ${newModel})`);
-  console.log(
-    `   - Current dimension: ${currentModelInfo.dimension}, New dimension: ${newModelInfo.dimension}`,
-  );
-  console.log(`   - Different dimension: ${isDifferentDimension}`);
-
-  if (isSameModel && !isDifferentDimension) {
-    console.log('✅ Same model and dimension - no need to switch');
-    return;
-  }
-
-  const switchReasons = [];
-  if (!isSameModel) switchReasons.push('different model');
-  if (isDifferentDimension) switchReasons.push('different dimension');
-
-  console.log(`🚀 Switching model due to: ${switchReasons.join(', ')}`);
-  console.log(
-    `📋 Model: ${currentModel.value} (${currentModelInfo.dimension}D) -> ${newModel} (${newModelInfo.dimension}D)`,
-  );
-
-  isModelSwitching.value = true;
-  modelSwitchProgress.value = getMessage('switchingModelStatus');
-
-  modelInitializationStatus.value = 'downloading';
-  modelDownloadProgress.value = 0;
-  isModelDownloading.value = true;
-
-  try {
-    await saveModelPreference(newModel);
-    await saveVersionPreference('quantized');
-    await saveModelState();
-
-    modelSwitchProgress.value = getMessage('semanticEngineInitializingStatus');
-
-    startModelStatusMonitoring();
-
-    // eslint-disable-next-line no-undef
-    const response = await chrome.runtime.sendMessage({
-      type: 'switch_semantic_model',
-      modelPreset: newModel,
-      modelVersion: 'quantized',
-      modelDimension: newModelInfo.dimension,
-      previousDimension: currentModelInfo.dimension,
-    });
-
-    if (response && response.success) {
-      currentModel.value = newModel;
-      modelSwitchProgress.value = getMessage('successNotification');
-      console.log(
-        '模型切换成功:',
-        newModel,
-        'version: quantized',
-        'dimension:',
-        newModelInfo.dimension,
-      );
-
-      modelInitializationStatus.value = 'ready';
-      isModelDownloading.value = false;
-      await saveModelState();
-
-      setTimeout(() => {
-        modelSwitchProgress.value = '';
-      }, 2000);
-    } else {
-      throw new Error(response?.error || 'Model switch failed');
-    }
-  } catch (error: any) {
-    console.error('模型切换失败:', error);
-    modelSwitchProgress.value = `Model switch failed: ${error?.message || 'Unknown error'}`;
-
-    modelInitializationStatus.value = 'error';
-    isModelDownloading.value = false;
-
-    const errorMessage = error?.message || '未知错误';
-    if (
-      errorMessage.includes('network') ||
-      errorMessage.includes('fetch') ||
-      errorMessage.includes('timeout')
-    ) {
-      modelErrorType.value = 'network';
-      modelErrorMessage.value = getMessage('networkErrorMessage');
-    } else if (
-      errorMessage.includes('corrupt') ||
-      errorMessage.includes('invalid') ||
-      errorMessage.includes('format')
-    ) {
-      modelErrorType.value = 'file';
-      modelErrorMessage.value = getMessage('modelCorruptedErrorMessage');
-    } else {
-      modelErrorType.value = 'unknown';
-      modelErrorMessage.value = errorMessage;
-    }
-
-    await saveModelState();
-
-    setTimeout(() => {
-      modelSwitchProgress.value = '';
-    }, 8000);
-  } finally {
-    isModelSwitching.value = false;
   }
 };
 
@@ -1599,18 +816,14 @@ onMounted(async () => {
   // 初始化主题
   await initTheme();
   await loadPortPreference();
-  await loadModelPreference();
   await checkNativeConnection();
   await checkServerStatus();
-  await refreshStorageStats();
-  await loadCacheStats();
   await loadFlows();
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     currentTabUrl.value = tab?.url || '';
   } catch {}
 
-  await checkSemanticEngineStatus();
   setupServerStatusListener();
   // Auto-refresh workflows list when storage rr_flows changes
   try {
@@ -1626,8 +839,6 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-  stopModelStatusMonitoring();
-  stopSemanticEngineStatusPolling();
   // Clean up runtime message listener
   try {
     const msgFn = (window as any).__rr_popup_onMessage;
@@ -2042,49 +1253,6 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 14px;
 }
-.semantic-engine-card {
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.semantic-engine-status {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.semantic-engine-button {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background: #8b5cf6;
-  color: white;
-  font-weight: 600;
-  padding: 12px 16px;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-}
-
-.semantic-engine-button:hover:not(:disabled) {
-  background: #7c3aed;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-}
-
-.semantic-engine-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
 .status-header {
   display: flex;
   justify-content: space-between;

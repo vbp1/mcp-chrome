@@ -313,11 +313,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Embedding Settings Tab -->
-    <div v-show="activeTab === 'embedding-settings'" class="embedding-settings-content">
-      <EmbeddingSettingsPage @back="closeSidepanel" @configChanged="onEmbeddingConfigChanged" />
-    </div>
   </div>
 </template>
 
@@ -328,7 +323,6 @@ import type { ElementMarker, UpsertMarkerRequest } from '@/common/element-marker
 import AgentChat from './components/AgentChat.vue';
 import SidepanelNavigator from './components/SidepanelNavigator.vue';
 import { WorkflowsView } from './components/workflows';
-import EmbeddingSettingsPage from '../popup/components/EmbeddingSettingsPage.vue';
 import { useAgentTheme } from './composables/useAgentTheme';
 import { useWorkflowsV3, type FlowLite } from './composables/useWorkflowsV3';
 import { getMessage } from '@/utils/i18n';
@@ -339,25 +333,16 @@ import { getMessage } from '@/utils/i18n';
 const { theme: currentTheme, initTheme } = useAgentTheme();
 
 // Tab state - default to AgentChat
-const activeTab = ref<'workflows' | 'element-markers' | 'agent-chat' | 'embedding-settings'>(
-  'agent-chat',
-);
+const activeTab = ref<'workflows' | 'element-markers' | 'agent-chat'>('agent-chat');
 
 // Handle tab change and update URL for deep linking
-function handleTabChange(
-  tab: 'workflows' | 'element-markers' | 'agent-chat' | 'embedding-settings',
-) {
+function handleTabChange(tab: 'workflows' | 'element-markers' | 'agent-chat') {
   activeTab.value = tab;
   // Update URL params for deep link
   const url = new URL(window.location.href);
   url.searchParams.set('tab', tab);
   history.replaceState(null, '', url.toString());
   // Note: loadMarkers is already called by the watch on activeTab, no need to call here
-}
-
-// Handle embedding config changes
-function onEmbeddingConfigChanged() {
-  console.log('Embedding configuration updated');
 }
 
 // Close sidepanel
@@ -931,8 +916,6 @@ onMounted(async () => {
       await loadMarkers();
     } else if (tabParam === 'workflows') {
       activeTab.value = 'workflows';
-    } else if (tabParam === 'embedding-settings') {
-      activeTab.value = 'embedding-settings';
     }
   }
 
@@ -975,12 +958,6 @@ onUnmounted(() => {
 /* Element Markers Styles - Using agent-theme tokens */
 .element-markers-content {
   padding-bottom: 24px;
-  color: var(--ac-text, #262626);
-}
-
-.embedding-settings-content {
-  height: 100%;
-  overflow-y: auto;
   color: var(--ac-text, #262626);
 }
 
