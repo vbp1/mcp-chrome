@@ -1697,7 +1697,7 @@ onUnmounted(() => {
 .rr-icon-buttons {
   display: flex;
   gap: 12px;
-  justify-content: flex-start;
+  justify-content: space-evenly;
   padding: 16px;
   background: var(--ac-surface, white);
   border-radius: var(--ac-radius-card, 12px);
