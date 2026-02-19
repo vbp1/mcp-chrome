@@ -167,49 +167,6 @@
                 </svg>
               </div>
             </button>
-            <button
-              class="navigator-item"
-              :class="{ 'navigator-item-active': activeTab === 'embedding-settings' }"
-              @click="selectTab('embedding-settings')"
-            >
-              <div class="navigator-item-icon">
-                <!-- Cube / Vector Space icon -->
-                <svg
-                  viewBox="0 0 24 24"
-                  width="20"
-                  height="20"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"
-                  />
-                </svg>
-              </div>
-              <div class="navigator-item-content">
-                <span class="navigator-item-title">{{
-                  getMessage('embeddingSettingsTitle') || 'Embedding Settings'
-                }}</span>
-                <span class="navigator-item-desc">{{
-                  getMessage('embeddingSettingsDesc') || 'Configure embedding models'
-                }}</span>
-              </div>
-              <div v-if="activeTab === 'embedding-settings'" class="navigator-item-check">
-                <svg
-                  viewBox="0 0 24 24"
-                  width="16"
-                  height="16"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.5"
-                >
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-            </button>
           </div>
         </div>
       </div>
@@ -222,7 +179,7 @@ import { ref, computed } from 'vue';
 import { useFloatingDrag } from '../composables/useFloatingDrag';
 import { getMessage } from '@/utils/i18n';
 
-type TabType = 'workflows' | 'element-markers' | 'agent-chat' | 'embedding-settings';
+type TabType = 'workflows' | 'element-markers' | 'agent-chat';
 
 const BUTTON_SIZE = 36;
 const CLAMP_MARGIN = 12;

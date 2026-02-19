@@ -103,8 +103,6 @@ export default defineConfig({
     web_accessible_resources: [
       {
         resources: [
-          '/models/*', // 允许访问 public/models/ 下的所有文件
-          '/workers/*', // 允许访问 workers 文件
           '/inject-scripts/*', // 允许内容脚本注入的助手文件
         ],
         matches: ['<all_urls>'],
@@ -120,7 +118,7 @@ export default defineConfig({
           content_security_policy: {
             // Allow inline styles injected by Vite (compiled CSS) and data images used in UI thumbnails
             extension_pages:
-              "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http://127.0.0.1:*;",
+              "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: http://127.0.0.1:*;",
           },
         }),
   },
@@ -141,10 +139,6 @@ export default defineConfig({
           {
             src: 'inject-scripts/*.js',
             dest: 'inject-scripts',
-          },
-          {
-            src: ['workers/*'],
-            dest: 'workers',
           },
           {
             src: '_locales/**/*',
