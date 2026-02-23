@@ -2673,6 +2673,52 @@
   }
 
   /**
+   * Collect key attributes from an element for AI context.
+   */
+  function collectKeyAttributes(el) {
+    if (!el) return null;
+    const KEYS = [
+      'role',
+      'aria-label',
+      'aria-describedby',
+      'aria-expanded',
+      'aria-hidden',
+      'title',
+      'alt',
+      'href',
+      'src',
+      'name',
+      'placeholder',
+      'type',
+      'value',
+      'data-testid',
+      'data-test-id',
+      'for',
+      'action',
+      'method',
+    ];
+    const attrs = {};
+    for (const key of KEYS) {
+      const val = el.getAttribute(key);
+      if (val != null && val !== '') attrs[key] = val.length > 200 ? val.slice(0, 200) : val;
+    }
+    return Object.keys(attrs).length > 0 ? attrs : null;
+  }
+
+  /**
+   * Get parent element context (tag, id, classes).
+   */
+  function getParentContext(el) {
+    const parent = el?.parentElement;
+    if (!parent) return null;
+    return {
+      tagName: parent.tagName?.toLowerCase() || 'unknown',
+      id: parent.id || null,
+      classes: parent.classList ? Array.from(parent.classList) : [],
+    };
+  }
+
+  /**
    * Send element info to AI Assistant chat
    * Opens side panel and inserts formatted element info at cursor position
    */
@@ -2691,8 +2737,11 @@
         tagName: el?.tagName?.toLowerCase() || 'unknown',
         id: el?.id || null,
         classes: el ? Array.from(el.classList || []) : [],
-        text: el?.textContent?.trim()?.slice(0, 100) || null,
+        text: el?.textContent?.trim()?.slice(0, 200) || null,
         pageUrl: location.href,
+        attributes: collectKeyAttributes(el),
+        outerHTML: el?.outerHTML?.slice(0, 500) || null,
+        parentContext: getParentContext(el),
       };
 
       // Send to background to open side panel and insert
