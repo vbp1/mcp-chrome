@@ -1169,14 +1169,22 @@ interface ElementMarkerInfo {
   classes: string[];
   text: string | null;
   pageUrl: string;
+  attributes?: Record<string, string> | null;
+  outerHTML?: string | null;
+  parentContext?: { tagName: string; id: string | null; classes: string[] } | null;
 }
 
 function formatElementMarkerInfoForChat(info: ElementMarkerInfo): string {
   const lines: string[] = [];
 
-  // Page URL
   lines.push(`## Page URL`);
   lines.push(`${info.pageUrl}`);
+  lines.push('');
+
+  // Selector
+  const typeLabel = info.selectorType === 'xpath' ? 'XPath' : 'CSS';
+  lines.push(`## Selector`);
+  lines.push(`${typeLabel}: ${info.selector}`);
   lines.push('');
 
   // Element Fingerprint
@@ -1189,10 +1197,41 @@ function formatElementMarkerInfoForChat(info: ElementMarkerInfo): string {
     lines.push(`- classes: ${info.classes.join(' ')}`);
   }
   if (info.text) {
-    const truncatedText = info.text.length > 50 ? info.text.slice(0, 47) + '...' : info.text;
+    const truncatedText = info.text.length > 100 ? info.text.slice(0, 97) + '...' : info.text;
     lines.push(`- text: "${truncatedText}"`);
   }
   lines.push('');
+
+  // Attributes
+  if (info.attributes && Object.keys(info.attributes).length > 0) {
+    lines.push('## Attributes');
+    for (const [key, val] of Object.entries(info.attributes)) {
+      lines.push(`- ${key}: ${val}`);
+    }
+    lines.push('');
+  }
+
+  // Parent context
+  if (info.parentContext) {
+    lines.push('## Parent');
+    lines.push(`- tag: ${info.parentContext.tagName}`);
+    if (info.parentContext.id) {
+      lines.push(`- id: ${info.parentContext.id}`);
+    }
+    if (info.parentContext.classes && info.parentContext.classes.length > 0) {
+      lines.push(`- classes: ${info.parentContext.classes.join(' ')}`);
+    }
+    lines.push('');
+  }
+
+  // Outer HTML
+  if (info.outerHTML) {
+    lines.push('## HTML');
+    lines.push(`\`\`\`html`);
+    lines.push(info.outerHTML);
+    lines.push(`\`\`\``);
+    lines.push('');
+  }
 
   return lines.join('\n');
 }
